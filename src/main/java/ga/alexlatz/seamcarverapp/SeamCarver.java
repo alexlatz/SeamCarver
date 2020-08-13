@@ -1,12 +1,8 @@
 package ga.alexlatz.seamcarverapp;
 
-import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
-import javafx.scene.paint.Color;
-
-import java.util.ArrayList;
 
 public class SeamCarver {
     private WritableImage image;
@@ -164,8 +160,7 @@ public class SeamCarver {
                     int a = ((((seamColor >> 24) & 0xff) + ((nextColor >> 24) & 0xff)) / 2);
                     int r = ((((seamColor >> 16) & 0xff) + ((nextColor >> 16) & 0xff)) / 2);
                     int g = ((((seamColor >> 8) & 0xff) + ((nextColor >> 8) & 0xff)) / 2);
-                    int b = ((((seamColor) & 0xff) + ((nextColor) & 0xff)) / 2);
-                    int newColor = b;
+                    int newColor = ((((seamColor) & 0xff) + ((nextColor) & 0xff)) / 2);
                     newColor = newColor + (g << 8);
                     newColor = newColor + (r << 16);
                     newColor = newColor + (a << 24);
@@ -204,24 +199,26 @@ public class SeamCarver {
     private void seamEnergy(int[] seam, boolean delete) {
         double[][] newEnergy = new double[width()][height()];
         for (int y = 0; y < height(); y++) {
-            System.arraycopy(energy, 0, newEnergy, 0, seam[y]-1);
-            int num = 1;
+            System.arraycopy(energy, 0, newEnergy, 0, seam[y]);
             if (!delete) {
                 newEnergy[seam[y]][y] = energy(seam[y], y);
                 if (seam[y] < width() - 1) {
-                    newEnergy[seam[y]+1][y] = energy(seam[y]+1, y);
-                    newEnergy[seam[y]+2][y] = energy(seam[y]+2, y);
-                    num = 3;
+                    newEnergy[seam[y] + 1][y] = energy(seam[y] + 1, y);
+                    newEnergy[seam[y] + 2][y] = energy(seam[y] + 2, y);
+                    if (energy.length - (seam[y] + 2) > -1)
+                        System.arraycopy(energy, seam[y] + 2, newEnergy, seam[y] + 3, energy.length - (seam[y] + 2));
                 } else {
                     newEnergy[seam[y]-1][y] = energy(seam[y]-1, y);
                     newEnergy[seam[y]+1][y] = energy(seam[y]+1, y);
-                    num = -1;
                 }
             } else {
-                if (seam[y] > 0) newEnergy[seam[y]-1][y] = energy(seam[y]-1, y);
-                if (seam[y] < width()-1) newEnergy[seam[y]][y] = energy(seam[y], y);
+                if (seam[y] > 0) newEnergy[seam[y] - 1][y] = energy(seam[y] - 1, y);
+                if (seam[y] < width() - 1) {
+                    if (seam[y] < width() - 1) newEnergy[seam[y]][y] = energy(seam[y], y);
+                    if (seam[y] + 2 < energy.length)
+                        System.arraycopy(energy, seam[y] + 2, newEnergy, seam[y] + 1, newEnergy.length - (seam[y] + 1));
+                }
             }
-            if (num != -1) System.arraycopy(energy, seam[y] + num+1, newEnergy, seam[y]+num, energy.length-seam[y]+2);
         }
         energy = newEnergy;
     }
