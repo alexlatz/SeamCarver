@@ -4,10 +4,13 @@ import javafx.scene.image.PixelReader;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+
 public class SeamCarver {
     private WritableImage image;
     private double[][] energy;
-    private double[][] energyTo;
 
     public SeamCarver(final WritableImage image) {
         this.image = image;
@@ -32,37 +35,18 @@ public class SeamCarver {
     }
 
     public double energy(final int x, final int y) {
-        checkCoords(x, y);
         if (x == 0 || x == width() - 1 || y == 0 || y == height() - 1)
             return 1000;
         PixelReader reader = image.getPixelReader();
         return Math.sqrt(colorDiff(reader.getArgb(x + 1, y), reader.getArgb(x - 1, y))
                 + colorDiff(reader.getArgb(x, y + 1), reader.getArgb(x, y - 1)));
     }
-    public int[][] findVerticalSeams(int num) {
-        int[][] seams = new int[num][height()];
-        WritableImage original = new WritableImage(image.getPixelReader(), width(), height());
-        if (num > 0) seams[0] = findVerticalSeam();
-        for (int i = 1; i < num; i++) {
-            seams[i] = findVerticalSeam();
-            removeVerticalSeam(seams[i]);
-            for (int j = 0; j < seams[0].length; j++) {
-                if (seams[i-1][j] <= seams[i][j]) seams[i][j] += 2;
-            }
-        }
-        image = original;
-        return seams;
-    }
-    public int[][] findHorizontalSeams(int num) {
-        transpose();
-        int[][] seams = findVerticalSeams(num);
-        transpose();
-        return seams;
-    }
 
-    public int[] findVerticalSeam() {
-        energyTo = new double[width()][height()];
-        final int[] seam = new int[height()];
+    public int[][] findVerticalSeam(int num) {
+        int[][] seams = new int[height()][num];
+        boolean[][] usedPixels = new boolean[height()][width()];
+        double[][] energyTo = new double[width()][height()];
+        ArrayList<HashSet<Integer>> possibleMoves = new ArrayList<>();
         for (int y = 0; y < height(); y++) {
             for (int x = 0; x < width(); x++) {
                 if (y == 0)
@@ -73,70 +57,107 @@ public class SeamCarver {
         }
         for (int y = 0; y < height(); y++) {
             for (int x = 0; x < width(); x++) {
-                relax(x, y, x, y + 1);
-                relax(x, y, x + 1, y + 1);
-                relax(x, y, x - 1, y + 1);
+                relax(energyTo, x, y, x, y + 1);
+                relax(energyTo, x, y, x + 1, y + 1);
+                relax(energyTo, x, y, x - 1, y + 1);
             }
         }
-        double min = Double.POSITIVE_INFINITY;
-        if (height() > 1) {
-            for (int x = 0; x < width(); x++) {
-                if (energyTo[x][height() - 2] < min) {
-                    min = energyTo[x][height() - 2];
-                    seam[height() - 2] = x;
+        for (int i = 0; i < num; i++) {
+            double min = Double.POSITIVE_INFINITY;
+            if (height() > 1) {
+                for (int x = 0; x < width(); x++) {
+                    if (energyTo[x][height() - 2] < min && !usedPixels[height() - 2][x]) {
+                        min = energyTo[x][height() - 2];
+                        seams[height() - 2][i] = x;
+                    }
                 }
+                seams[height() - 1][i] = seams[height() - 2][i];
+                usedPixels[height() - 2][seams[height() - 2][i]] = true;
+                usedPixels[height() - 1][seams[height() - 2][i]] = true;
+            } else {
+                seams[height() - 1][i] = 0;
             }
-            seam[height() - 1] = seam[height() - 2];
-        } else {
-            seam[height() - 1] = 0;
-            return seam;
+            possibleMoves.add(new HashSet<>());
+            possibleMoves.get(i).add(seams[height() - 2][i]);
+            if (seams[height() - 2][i] < width() - 1) possibleMoves.get(i).add(seams[height() - 2][i] + 1);
+            if (seams[height() - 2][i] > 0) possibleMoves.get(i).add(seams[height() - 2][i] - 1);
         }
         for (int y = height() - 2; y > 0; y--) {
-            double minSeam = Double.POSITIVE_INFINITY;
-            if (seam[y] - 1 > 0) {
-                if (energyTo[seam[y] - 1][y - 1] < minSeam) {
-                    minSeam = energyTo[seam[y] - 1][y - 1];
-                    seam[y - 1] = seam[y] - 1;
+            for (int i = 0; i < num; i++) {
+                double minSeam = Double.POSITIVE_INFINITY;
+                if (seams[y][i] - 1 > 0) {
+                    if (energyTo[seams[y][i] - 1][y - 1] < minSeam && !usedPixels[y - 1][seams[y][i] - 1] && allowedMove(possibleMoves, i, seams[y][i] - 1)) {
+                        minSeam = energyTo[seams[y][i] - 1][y - 1];
+                        seams[y - 1][i] = seams[y][i] - 1;
+                    }
                 }
-            }
-            if (energyTo[seam[y]][y - 1] < minSeam) {
-                minSeam = energyTo[seam[y]][y - 1];
-                seam[y - 1] = seam[y];
-            }
-            if (seam[y] + 1 < width()) {
-                if (energyTo[seam[y] + 1][y - 1] < minSeam) {
-                    seam[y - 1] = seam[y] + 1;
+                if (energyTo[seams[y][i]][y - 1] < minSeam && !usedPixels[y - 1][seams[y][i]] && allowedMove(possibleMoves, i, seams[y][i])) {
+                    minSeam = energyTo[seams[y][i]][y - 1];
+                    seams[y - 1][i] = seams[y][i];
                 }
+                if (seams[y][i] + 1 < width()) {
+                    if (energyTo[seams[y][i] + 1][y - 1] < minSeam && !usedPixels[y - 1][seams[y][i] + 1] && allowedMove(possibleMoves, i, seams[y][i] + 1)) {
+                        seams[y - 1][i] = seams[y][i] + 1;
+                    }
+                }
+                if (seams[y - 1][i] == 0) {
+                    System.out.println("bad");
+                    int add = 0, sub = 0;
+                    while (seams[y][i] + add < width() || !usedPixels[y - 1][seams[y][i] + add]) add++;
+                    while (seams[y][i] - sub >= 0 || !usedPixels[y - 1][seams[y][i] - sub]) sub++;
+                    if (add > sub) seams[y - 1][i] = seams[y - 1][i] + add;
+                    else seams[y - 1][i] = seams[y - 1][i] - sub;
+                }
+                usedPixels[y - 1][seams[y - 1][i]] = true;
+                for (int j = i + 1; j < num; j++) {
+                    possibleMoves.get(j).remove(seams[y - 1][i]);
+                }
+                possibleMoves.get(i).clear();
+                possibleMoves.get(i).add(seams[y - 1][i]);
+                if (seams[y - 1][i] < width() - 1) possibleMoves.get(i).add(seams[y - 1][i] + 1);
+                if (seams[y - 1][i] > 0) possibleMoves.get(i).add(seams[y - 1][i] - 1);
             }
         }
+        return seams;
+    }
+
+    private boolean allowedMove(ArrayList<HashSet<Integer>> possibleMoves, int i, int x) {
+        for (int j = i + 1; j < possibleMoves.size(); j++) {
+            if (possibleMoves.get(j).contains(x) && possibleMoves.get(j).size() == 1) return false;
+        }
+        return true;
+    }
+
+    public int[][] findHorizontalSeam(int num) {
+        transpose();
+        final int[][] seam = findVerticalSeam(num);
+        transpose();
         return seam;
     }
 
-    public int[] findHorizontalSeam() {
-        transpose();
-        final int[] seam = findVerticalSeam();
-        transpose();
-        return seam;
-    }
-
-    public void removeVerticalSeam(final int[] seam) {
-        if (seam == null || width() <= 1 || seam.length != height())
-            throw new IllegalArgumentException();
-        checkSeam(seam);
-        final WritableImage newPic = new WritableImage(width() - 1, height());
+    public void removeVerticalSeam(final int[][] seam) {
+        final WritableImage newPic = new WritableImage(width() - seam[0].length, height());
         PixelReader reader = image.getPixelReader();
         PixelWriter writer = newPic.getPixelWriter();
+        double[][] newEnergy = new double[width() - seam[0].length][height()];
         for (int y = 0; y < height(); y++) {
+            Arrays.sort(seam[y]);
             int curRow = 0;
             for (int x = 0; x < width(); x++) {
-                if (x != seam[y]) writer.setArgb(curRow++, y, reader.getArgb(x, y));
+                if (Arrays.binarySearch(seam[y], x) < 0) {
+                    writer.setArgb(curRow, y, reader.getArgb(x, y));
+                    if (newEnergy[curRow][y] != 0) newEnergy[curRow++][y] = energy[x][y];
+                } else {
+                    newEnergy[curRow][y] = energy(curRow, y);
+                    if (curRow > 0) newEnergy[curRow - 1][y] = energy(curRow - 1, y);
+                }
             }
         }
         image = newPic;
-        seamEnergy(seam, true);
+        energy = newEnergy;
     }
 
-    public void removeHorizontalSeam(final int[] seam) {
+    public void removeHorizontalSeam(final int[][] seam) {
         if (height() <= 1)
             throw new IllegalArgumentException();
         transpose();
@@ -144,19 +165,21 @@ public class SeamCarver {
         transpose();
     }
 
-    public void addVerticalSeam(final int[] seam) {
-        final WritableImage newPic = new WritableImage(width() + 1, height());
+    public void addVerticalSeam(final int[][] seam) {
+        final WritableImage newPic = new WritableImage(width() + seam[0].length, height());
         PixelWriter writer = newPic.getPixelWriter();
         PixelReader reader = image.getPixelReader();
         for (int y = 0; y < height(); y++) {
+            Arrays.sort(seam[y]);
             int curRow = 0;
             for (int x = 0; x < width(); x++) {
-                if (x != seam[y]) writer.setArgb(curRow++, y, reader.getArgb(x, y));
+                int i = Arrays.binarySearch(seam[y], x);
+                if (i < 0) writer.setArgb(curRow++, y, reader.getArgb(x, y));
                 else {
-                    int seamColor = reader.getArgb(seam[y], y);
+                    int seamColor = reader.getArgb(seam[y][i], y);
                     int nextColor;
-                    if (x < width()-1) nextColor = reader.getArgb(seam[y] + 1, y);
-                    else nextColor = reader.getArgb(seam[y] - 1, y);
+                    if (x < width() - 1) nextColor = reader.getArgb(seam[y][i] + 1, y);
+                    else nextColor = reader.getArgb(seam[y][i] - 1, y);
                     int a = ((((seamColor >> 24) & 0xff) + ((nextColor >> 24) & 0xff)) / 2);
                     int r = ((((seamColor >> 16) & 0xff) + ((nextColor >> 16) & 0xff)) / 2);
                     int g = ((((seamColor >> 8) & 0xff) + ((nextColor >> 8) & 0xff)) / 2);
@@ -178,28 +201,45 @@ public class SeamCarver {
         seamEnergy(seam, false);
     }
 
-    public void addHorizontalSeam(final int[] seam) {
+    public void addHorizontalSeam(final int[][] seam) {
         transpose();
         addVerticalSeam(seam);
         transpose();
     }
 
-    public void addVerticalSeams(int[][] seams) {
-        for (int[] seam : seams) {
-            addVerticalSeam(seam);
-        }
-    }
-
-    public void addHorizontalSeams(int[][] seams) {
-        transpose();
-        addVerticalSeams(seams);
-        transpose();
-    }
-
-    private void seamEnergy(int[] seam, boolean delete) {
+    private void seamEnergy(int[][] seam, boolean delete) {
         double[][] newEnergy = new double[width()][height()];
         for (int y = 0; y < height(); y++) {
-            System.arraycopy(energy, 0, newEnergy, 0, seam[y]);
+            System.arraycopy(energy, 0, newEnergy, 0, seam[y][0]);
+            for (int i = 0; i < seam[0].length; i++) {
+                if (!delete) {
+                    newEnergy[seam[y][i]][y] = energy(seam[y][i], y);
+                    if (seam[y][i] < width() - 1) {
+                        newEnergy[seam[y][i] + 1][y] = energy(seam[y][i] + 1, y);
+                        newEnergy[seam[y][i] + 2][y] = energy(seam[y][i] + 2, y);
+                        if (i < seam[0].length - 1)
+                            System.arraycopy(energy, seam[y][i] + 2, newEnergy, seam[y][i] + 3, (seam[y][i + 1] - seam[y][i]));
+                        try {
+                            System.arraycopy(energy, seam[y][i] + 2, newEnergy, seam[y][i] + 3, energy.length - (seam[y][i]));
+                        } catch (ArrayIndexOutOfBoundsException e) {
+                            System.out.println("bad");
+                        }
+                    } else {
+                        newEnergy[seam[y][i] - 1][y] = energy(seam[y][i] - 1, y);
+                        newEnergy[seam[y][i] + 1][y] = energy(seam[y][i] + 1, y);
+                    }
+                } else {
+                    if (seam[y][i] > 0) newEnergy[seam[y][i] - 1][y] = energy(seam[y][i] - 1, y);
+                    if (seam[y][i] < width() - 1) {
+                        if (seam[y][i] < width() - 1) newEnergy[seam[y][i]][y] = energy(seam[y][i], y);
+                        if (i < seam[0].length - 1)
+                            System.arraycopy(energy, seam[y][i] + 2, newEnergy, seam[y][i] + 1, (seam[y][i + 1] - seam[y][i]));
+                        else
+                            System.arraycopy(energy, seam[y][i] + 2, newEnergy, seam[y][i] + 1, newEnergy.length - (seam[y][i]));
+                    }
+                }
+            }
+            /*
             if (!delete) {
                 newEnergy[seam[y]][y] = energy(seam[y], y);
                 if (seam[y] < width() - 1) {
@@ -219,22 +259,10 @@ public class SeamCarver {
                         System.arraycopy(energy, seam[y] + 2, newEnergy, seam[y] + 1, newEnergy.length - (seam[y] + 1));
                 }
             }
+             */
         }
         energy = newEnergy;
     }
-
-    private void checkSeam(final int[] seam) {
-        for (int i = 1; i < seam.length; i++) {
-            if (Math.abs(seam[i] - seam[i - 1]) > 1)
-                throw new IllegalArgumentException();
-        }
-    }
-
-    private void checkCoords(final int x, final int y) {
-        if (x < 0 || x >= width() || y < 0 || y >= height())
-            throw new IllegalArgumentException();
-    }
-
 
     private void transpose() {
         final WritableImage flipped = new WritableImage(height(), width());
@@ -252,7 +280,7 @@ public class SeamCarver {
         energy = newEnergy;
     }
 
-    private void relax(final int x, final int y, final int x2, final int y2) {
+    private void relax(double[][] energyTo, final int x, final int y, final int x2, final int y2) {
         if (x2 < 0 || y2 < 0 || x2 > width() - 1 || y2 > height() - 1)
             return;
         if (energyTo[x2][y2] > energyTo[x][y] + energy[x2][y2])
@@ -264,5 +292,14 @@ public class SeamCarver {
         final double g = ((c1 >> 8) & 0xff) - ((c2 >> 8) & 0xff);
         final double b = ((c1) & 0xff) - ((c2) & 0xff);
         return r * r + g * g + b * b;
+    }
+
+    private class Node {
+        Node left;
+        Node down;
+        Node right;
+        double energy;
+        int x;
+        int y;
     }
 }

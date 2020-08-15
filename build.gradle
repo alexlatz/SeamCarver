@@ -14,7 +14,11 @@ sourceCompatibility = 1.11
 repositories {
     mavenCentral()
 }
+javafx {
+    version = "11.0.5"
+}
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
+
 }

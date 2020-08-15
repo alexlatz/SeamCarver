@@ -42,15 +42,13 @@ public class SeamCarverWindow extends Application {
                         int horizontalDiff = (int) (imageView.getImage().getWidth() - scene.getWidth());
                         int verticalDiff = (int) (imageView.getImage().getHeight() - scene.getHeight());
                         if (horizontalDiff != 0) {
-                            if (horizontalDiff > 0) for (int i = 0; i < horizontalDiff; i++) {
-                                carver.removeVerticalSeam(carver.findVerticalSeam());
-                            } else carver.addVerticalSeams(carver.findVerticalSeams(Math.abs(horizontalDiff) + 1));
+                            if (horizontalDiff > 0) carver.removeVerticalSeam(carver.findVerticalSeam(horizontalDiff));
+                            else carver.addVerticalSeam(carver.findVerticalSeam(Math.abs(horizontalDiff) + 1));
                             System.out.println("changed " + horizontalDiff + " vertical seams");
                         }
-                        if (verticalDiff != 0){
-                            if (verticalDiff > 0) for (int i = 0; i < verticalDiff; i++) {
-                                carver.removeHorizontalSeam(carver.findHorizontalSeam());
-                            } else carver.addHorizontalSeams(carver.findHorizontalSeams(Math.abs(verticalDiff) + 1));
+                        if (verticalDiff != 0) {
+                            if (verticalDiff > 0) carver.removeHorizontalSeam(carver.findHorizontalSeam(verticalDiff));
+                            else carver.addHorizontalSeam(carver.findHorizontalSeam(Math.abs(verticalDiff) + 1));
                             System.out.println("changed " + verticalDiff + " horizontal seams");
                         }
                         imageView.setImage(carver.image());
