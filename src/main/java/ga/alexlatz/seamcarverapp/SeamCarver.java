@@ -4,15 +4,25 @@ import javafx.scene.image.PixelReader;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Stack;
 
 public class SeamCarver {
     private WritableImage image;
     private double[][] energy;
+    private Stack<ArrayList<Integer>> addedSeams;
+    private Stack<ArrayList<Integer>> deletedSeams;
+    private boolean flipped;
+    private boolean override;
 
     public SeamCarver(final WritableImage image) {
         this.image = image;
         energy = new double[width()][height()];
+        addedSeams = new Stack<>();
+        deletedSeams = new Stack<>();
+        flipped = false;
+        override = false;
         for (int x = 0; x < width(); x++) {
             for (int y = 0; y < height(); y++) {
                 energy[x][y] = energy(x, y);
@@ -29,6 +39,7 @@ public class SeamCarver {
     }
 
     public WritableImage image() {
+        if (flipped) transpose();
         return image;
     }
 
@@ -40,10 +51,12 @@ public class SeamCarver {
                 + colorDiff(reader.getArgb(x, y + 1), reader.getArgb(x, y - 1)));
     }
 
-    public int[][] findVerticalSeam(int num) {
+    public int[][] findVerticalSeam(int num, boolean delete) {
         int[][] seams = new int[height()][num];
         boolean[][] usedPixels = new boolean[height()][width()];
         double[][] energyTo = new double[width()][height()];
+        int startFrom = delete ? checkStack(addedSeams, num, seams) : checkStack(deletedSeams, num, seams);
+        if (startFrom == -1) return seams;
         for (int y = 0; y < height(); y++) {
             for (int x = 0; x < width(); x++) {
                 if (y == 0)
@@ -59,7 +72,7 @@ public class SeamCarver {
                 relax(energyTo, x, y, x - 1, y + 1);
             }
         }
-        for (int i = 0; i < num; i++) {
+        for (int i = startFrom; i < num; i++) {
             double min = Double.POSITIVE_INFINITY;
             for (int x = 0; x < width(); x++) {
                 if (energyTo[x][height() - 2] < min && !usedPixels[height() - 2][x]) {
@@ -71,7 +84,7 @@ public class SeamCarver {
             usedPixels[height() - 2][seams[height() - 2][i]] = true;
             usedPixels[height() - 1][seams[height() - 2][i]] = true;
         }
-        for (int i = 0; i < num; i++) {
+        for (int i = startFrom; i < num; i++) {
             for (int y = height() - 2; y > 0; y--) {
                 double minSeam = Double.POSITIVE_INFINITY;
                 if (seams[y][i] - 1 > 0) {
@@ -97,6 +110,19 @@ public class SeamCarver {
         return seams;
     }
 
+    private int checkStack(Stack<ArrayList<Integer>> seamStack, int num, int[][] seams) {
+        int startFrom = 0;
+        if (seamStack.size() > 0) {
+            for (int i = 0; i < seamStack.size(); i++) {
+                if (i > num) return -1;
+                ArrayList<Integer> list = seamStack.pop();
+                for (int y = 0; y < list.size(); y++) seams[y][i] = list.get(y);
+                startFrom = i + 1;
+            }
+        }
+        return startFrom;
+    }
+
     private int leftMove(boolean[][] usedPixels, int x, int y) {
         for (int i = 1; i <= x; i++) {
             if (!usedPixels[y][x - i]) return x - i;
@@ -111,18 +137,23 @@ public class SeamCarver {
         return -1;
     }
 
-    public int[][] findHorizontalSeam(int num) {
-        transpose();
-        final int[][] seam = findVerticalSeam(num);
-        transpose();
-        return seam;
+    public int[][] findHorizontalSeam(int num, boolean delete) {
+        if (!flipped) transpose();
+        override = true;
+        return findVerticalSeam(num, delete);
     }
 
-    public void removeVerticalSeam(final int[][] seam) {
+    public void removeVerticalSeam(int num) {
+        int[][] seam = findVerticalSeam(num, true);
+        if (flipped && !override) transpose();
         final WritableImage newPic = new WritableImage(width() - seam[0].length, height());
         PixelReader reader = image.getPixelReader();
         PixelWriter writer = newPic.getPixelWriter();
         double[][] newEnergy = new double[width() - seam[0].length][height()];
+        for (int i = 0; i < num; i++) {
+            deletedSeams.push(new ArrayList<>());
+            for (int y = 0; y < height(); y++) deletedSeams.peek().add(seam[y][i]);
+        }
         for (int y = 0; y < height(); y++) {
             Arrays.sort(seam[y]);
             int curRow = 0;
@@ -142,21 +173,28 @@ public class SeamCarver {
             }
         }
         energy = newEnergy;
+        override = false;
     }
 
-    public void removeHorizontalSeam(final int[][] seam) {
+    public void removeHorizontalSeam(int num) {
         if (height() <= 1)
             throw new IllegalArgumentException();
-        transpose();
-        removeVerticalSeam(seam);
-        transpose();
+        if (!flipped) transpose();
+        override = true;
+        removeVerticalSeam(num);
     }
 
-    public void addVerticalSeam(final int[][] seam) {
+    public void addVerticalSeam(int num) {
+        int[][] seam = findVerticalSeam(num, false);
+        if (flipped && !override) transpose();
         final WritableImage newPic = new WritableImage(width() + seam[0].length, height());
         PixelWriter writer = newPic.getPixelWriter();
         PixelReader reader = image.getPixelReader();
         double[][] newEnergy = new double[width() + seam[0].length][height()];
+        for (int i = 0; i < seam[0].length; i++) {
+            addedSeams.push(new ArrayList<>());
+            for (int y = 0; y < height(); y++) addedSeams.peek().add(seam[y][i]);
+        }
         for (int y = 0; y < height(); y++) {
             Arrays.sort(seam[y]);
             int curRow = 0;
@@ -205,12 +243,13 @@ public class SeamCarver {
             }
         }
         energy = newEnergy;
+        override = false;
     }
 
-    public void addHorizontalSeam(final int[][] seam) {
-        transpose();
-        addVerticalSeam(seam);
-        transpose();
+    public void addHorizontalSeam(int num) {
+        if (!flipped) transpose();
+        override = true;
+        addVerticalSeam(num);
     }
 
     private void transpose() {
@@ -227,6 +266,7 @@ public class SeamCarver {
         }
         image = flipped;
         energy = newEnergy;
+        this.flipped = !this.flipped;
     }
 
     private void relax(double[][] energyTo, final int x, final int y, final int x2, final int y2) {
