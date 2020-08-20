@@ -1,5 +1,4 @@
 plugins {
-    id 'java'
     id 'application'
     id 'org.openjfx.javafxplugin' version "0.0.9"
 }
@@ -9,16 +8,10 @@ version '0.1.0'
 
 mainClassName = "ga.alexlatz.seamcarverapp.SeamCarverWindow"
 
-sourceCompatibility = 1.11
-
 repositories {
     mavenCentral()
 }
 javafx {
-    version = "11.0.5"
-}
-
-dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.12'
-
+    version = "11"
+    modules = ['javafx.controls']
 }

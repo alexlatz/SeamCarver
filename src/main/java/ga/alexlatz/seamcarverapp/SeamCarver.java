@@ -13,6 +13,8 @@ public class SeamCarver {
     private double[][] energy;
     private Stack<ArrayList<Integer>> addedSeams;
     private Stack<ArrayList<Integer>> deletedSeams;
+    private Stack<ArrayList<Integer>> addedFlipped;
+    private Stack<ArrayList<Integer>> deletedFlipped;
     private boolean flipped;
     private boolean override;
 
@@ -21,6 +23,8 @@ public class SeamCarver {
         energy = new double[width()][height()];
         addedSeams = new Stack<>();
         deletedSeams = new Stack<>();
+        addedFlipped = new Stack<>();
+        deletedFlipped = new Stack<>();
         flipped = false;
         override = false;
         for (int x = 0; x < width(); x++) {
@@ -55,7 +59,11 @@ public class SeamCarver {
         int[][] seams = new int[height()][num];
         boolean[][] usedPixels = new boolean[height()][width()];
         double[][] energyTo = new double[width()][height()];
-        int startFrom = delete ? checkStack(addedSeams, num, seams) : checkStack(deletedSeams, num, seams);
+        int startFrom = 0;
+        if (!flipped)
+            startFrom = delete ? checkStack(addedSeams, num, seams, usedPixels) : checkStack(deletedSeams, num, seams, usedPixels);
+        else
+            startFrom = delete ? checkStack(addedFlipped, num, seams, usedPixels) : checkStack(deletedFlipped, num, seams, usedPixels);
         if (startFrom == -1) return seams;
         for (int y = 0; y < height(); y++) {
             for (int x = 0; x < width(); x++) {
@@ -72,12 +80,19 @@ public class SeamCarver {
                 relax(energyTo, x, y, x - 1, y + 1);
             }
         }
+        for (int i = 0; i < startFrom; i++) {
+            usedPixels[height() - 2][seams[height() - 2][i]] = true;
+            usedPixels[height() - 1][seams[height() - 2][i]] = true;
+        }
         for (int i = startFrom; i < num; i++) {
             double min = Double.POSITIVE_INFINITY;
             for (int x = 0; x < width(); x++) {
-                if (energyTo[x][height() - 2] < min && !usedPixels[height() - 2][x]) {
-                    min = energyTo[x][height() - 2];
-                    seams[height() - 2][i] = x;
+                for (int j = 0; j < i; j++) {
+                    if (Math.abs(seams[height() - 2][j] - x) < 20) continue;
+                    if (energyTo[x][height() - 2] < min && !usedPixels[height() - 2][x]) {
+                        min = energyTo[x][height() - 2];
+                        seams[height() - 2][i] = x;
+                    }
                 }
             }
             seams[height() - 1][i] = seams[height() - 2][i];
@@ -110,13 +125,21 @@ public class SeamCarver {
         return seams;
     }
 
-    private int checkStack(Stack<ArrayList<Integer>> seamStack, int num, int[][] seams) {
+    private int checkStack(Stack<ArrayList<Integer>> seamStack, int num, int[][] seams, boolean[][] usedPixels) {
         int startFrom = 0;
         if (seamStack.size() > 0) {
-            for (int i = 0; i < seamStack.size(); i++) {
-                if (i > num) return -1;
+            for (int i = 0; i < seams[0].length && i < seamStack.size(); i++) {
                 ArrayList<Integer> list = seamStack.pop();
-                for (int y = 0; y < list.size(); y++) seams[y][i] = list.get(y);
+                int diff = list.get(0) - width();
+                for (int y = 1; y <= height(); y++) {
+                    int move = leftMove(usedPixels, list.get(y) - diff, y - 1);
+                    if (move == -1) move = rightMove(usedPixels, list.get(y) - diff, y - 1);
+                    if (move == -1) return move;
+                    else {
+                        seams[y - 1][i] = move;
+                        usedPixels[y - 1][move] = true;
+                    }
+                }
                 startFrom = i + 1;
             }
         }
@@ -152,6 +175,7 @@ public class SeamCarver {
         double[][] newEnergy = new double[width() - seam[0].length][height()];
         for (int i = 0; i < num; i++) {
             deletedSeams.push(new ArrayList<>());
+            deletedSeams.peek().add(width());
             for (int y = 0; y < height(); y++) deletedSeams.peek().add(seam[y][i]);
         }
         for (int y = 0; y < height(); y++) {
@@ -193,6 +217,7 @@ public class SeamCarver {
         double[][] newEnergy = new double[width() + seam[0].length][height()];
         for (int i = 0; i < seam[0].length; i++) {
             addedSeams.push(new ArrayList<>());
+            addedSeams.peek().add(width());
             for (int y = 0; y < height(); y++) addedSeams.peek().add(seam[y][i]);
         }
         for (int y = 0; y < height(); y++) {
