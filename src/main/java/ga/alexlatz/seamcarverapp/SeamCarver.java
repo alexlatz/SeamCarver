@@ -126,24 +126,29 @@ public class SeamCarver {
     }
 
     private int checkStack(Stack<ArrayList<Integer>> seamStack, int num, int[][] seams, boolean[][] usedPixels) {
+        //TODO: something wrong with stack removal (all 0)
         int startFrom = 0;
         if (seamStack.size() > 0) {
             for (int i = 0; i < seams[0].length && i < seamStack.size(); i++) {
                 ArrayList<Integer> list = seamStack.pop();
-                int diff = list.get(0) - width();
-                for (int y = 1; y <= height(); y++) {
-                    int move = leftMove(usedPixels, list.get(y) - diff, y - 1);
-                    if (move == -1) move = rightMove(usedPixels, list.get(y) - diff, y - 1);
+                if (list.size() < height() + 1) {
+                    startFrom--;
+                    continue;
+                }
+                for (int y = 1; y < height() + 1; y++) {
+                    int x = (list.get(y) * width()) / list.get(0);
+                    int move = leftMove(usedPixels, x, y - 1);
+                    if (move == -1) move = rightMove(usedPixels, x, y - 1);
                     if (move == -1) return move;
                     else {
                         seams[y - 1][i] = move;
                         usedPixels[y - 1][move] = true;
                     }
                 }
-                startFrom = i + 1;
+                startFrom++;
             }
         }
-        return startFrom;
+        return Math.max(startFrom, 0);
     }
 
     private int leftMove(boolean[][] usedPixels, int x, int y) {
