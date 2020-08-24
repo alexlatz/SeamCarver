@@ -129,7 +129,8 @@ public class SeamCarver {
         //TODO: something wrong with stack removal (all 0)
         int startFrom = 0;
         if (seamStack.size() > 0) {
-            for (int i = 0; i < seams[0].length && i < seamStack.size(); i++) {
+            int n = seamStack.size();
+            for (int i = 0; i < seams[0].length && i < n; i++) {
                 ArrayList<Integer> list = seamStack.pop();
                 if (list.size() < height() + 1) {
                     startFrom--;
