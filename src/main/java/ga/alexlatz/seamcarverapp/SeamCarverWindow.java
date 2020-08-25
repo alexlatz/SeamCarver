@@ -92,6 +92,7 @@ public class SeamCarverWindow extends Application {
             public void handle(ActionEvent event) {
                 FileChooser fileChooser = new FileChooser();
                 fileChooser.setTitle("Choose an image");
+                fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
                 File file = fileChooser.showOpenDialog(primaryStage);
                 try {
                     imageView.setImage(new Image(new FileInputStream(file)));
@@ -108,7 +109,14 @@ public class SeamCarverWindow extends Application {
                 }
             }
         });
-        menuFile.getItems().addAll(openFile);
+        MenuItem saveImage = new MenuItem("Save");
+        saveImage.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+            }
+        });
+        MenuItem saveAsImage = new MenuItem("Save As...");
+        menuFile.getItems().addAll(openFile, saveImage, saveAsImage);
         Menu menuEdit = new Menu("Edit");
         MenuItem changeHeight = new MenuItem("Change Height...");
         changeHeight.setOnAction(new EventHandler<ActionEvent>() {
