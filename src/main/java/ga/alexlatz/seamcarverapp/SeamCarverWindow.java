@@ -1,8 +1,10 @@
 package ga.alexlatz.seamcarverapp;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
@@ -13,14 +15,18 @@ import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.Pane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -28,6 +34,7 @@ import java.util.TimerTask;
 public class SeamCarverWindow extends Application {
     ImageView imageView;
     SeamCarver seamCarver;
+    File path;
 
     public static void main(String[] args) {
         launch(args);
@@ -46,6 +53,12 @@ public class SeamCarverWindow extends Application {
         primaryStage.setTitle("SeamCarver");
         primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+    @Override
+    public void stop() {
+        Platform.exit();
+        System.exit(0);
     }
 
     public ChangeListener<Number> resizePrep(Scene scene, Stage primaryStage) {
@@ -87,6 +100,7 @@ public class SeamCarverWindow extends Application {
         MenuBar menuBar = new MenuBar();
         Menu menuFile = new Menu("File");
         MenuItem openFile = new MenuItem("Open...");
+        openFile.setAccelerator(KeyCombination.keyCombination("SHORTCUT+O"));
         openFile.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -96,6 +110,7 @@ public class SeamCarverWindow extends Application {
                 File file = fileChooser.showOpenDialog(primaryStage);
                 try {
                     imageView.setImage(new Image(new FileInputStream(file)));
+                    path = file;
                     Image img = imageView.getImage();
                     seamCarver = new SeamCarver(new WritableImage(img.getPixelReader(), (int) img.getWidth(), (int) img.getHeight()));
                     primaryStage.widthProperty().removeListener(resizeListener);
@@ -110,13 +125,35 @@ public class SeamCarverWindow extends Application {
             }
         });
         MenuItem saveImage = new MenuItem("Save");
+        saveImage.setAccelerator(KeyCombination.keyCombination("SHORTCUT+S"));
         saveImage.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
+                if (path != null) {
+                    saveFile(path);
+                }
             }
         });
         MenuItem saveAsImage = new MenuItem("Save As...");
-        menuFile.getItems().addAll(openFile, saveImage, saveAsImage);
+        saveAsImage.setAccelerator(KeyCombination.keyCombination("SHORTCUT+SHIFT+S"));
+        saveAsImage.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                FileChooser fileChooser = new FileChooser();
+                fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
+                File save = fileChooser.showSaveDialog(primaryStage);
+                saveFile(save);
+            }
+        });
+        MenuItem quit = new MenuItem("Quit");
+        quit.setAccelerator(KeyCombination.keyCombination("SHORTCUT+Q"));
+        quit.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                stop();
+            }
+        });
+        menuFile.getItems().addAll(openFile, saveImage, saveAsImage, quit);
         Menu menuEdit = new Menu("Edit");
         MenuItem changeHeight = new MenuItem("Change Height...");
         changeHeight.setOnAction(new EventHandler<ActionEvent>() {
@@ -129,7 +166,9 @@ public class SeamCarverWindow extends Application {
                 dialog.setContentText("Enter the new height here:");
                 Optional<String> result = dialog.showAndWait();
                 if (result.isPresent()) {
-                    seamCarver.removeHorizontalSeam(seamCarver.height() - Integer.parseInt(result.get()));
+                    int s = seamCarver.height() - Integer.parseInt(result.get());
+                    if (s < 0) seamCarver.addHorizontalSeam(Math.abs(s));
+                    else seamCarver.removeHorizontalSeam(s);
                     imageView.setImage(seamCarver.image());
                     primaryStage.heightProperty().removeListener(resizeListener);
                     primaryStage.setHeight(seamCarver.height());
@@ -148,7 +187,9 @@ public class SeamCarverWindow extends Application {
                 dialog.setContentText("Enter the new width here:");
                 Optional<String> result = dialog.showAndWait();
                 if (result.isPresent()) {
-                    seamCarver.removeVerticalSeam(seamCarver.width() - Integer.parseInt(result.get()));
+                    int s = seamCarver.width() - Integer.parseInt(result.get());
+                    if (s < 0) seamCarver.addVerticalSeam(Math.abs(s));
+                    else seamCarver.removeVerticalSeam(s);
                     imageView.setImage(seamCarver.image());
                     primaryStage.widthProperty().removeListener(resizeListener);
                     primaryStage.setWidth(seamCarver.width());
@@ -163,5 +204,17 @@ public class SeamCarverWindow extends Application {
         if (os != null && os.startsWith("Mac"))
             menuBar.useSystemMenuBarProperty().set(true);
         pane.getChildren().addAll(menuBar);
+    }
+
+    private void saveFile(File save) {
+        BufferedImage original = SwingFXUtils.fromFXImage(seamCarver.image(), null);
+        BufferedImage bufferedImage = new BufferedImage(original.getWidth(), original.getHeight(), BufferedImage.TYPE_INT_RGB);
+        bufferedImage.getGraphics().drawImage(original, 0, 0, null);
+        try {
+            String ext = save.getName().substring(save.getName().lastIndexOf(".") + 1);
+            ImageIO.write(bufferedImage, ext, save);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
