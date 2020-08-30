@@ -42,17 +42,22 @@ public class SeamCarverWindow extends Application {
 
     @Override
     public void start(Stage primaryStage) throws FileNotFoundException {
-        Image img = new Image(new FileInputStream("stretchb.jpg"));
-        WritableImage writeImg = new WritableImage(img.getPixelReader(), (int) img.getWidth(), (int) img.getHeight());
-        imageView = new ImageView(writeImg);
-        Pane pane = new Pane(imageView);
-        Scene scene = new Scene(pane, imageView.getImage().getWidth(), imageView.getImage().getHeight());
-        seamCarver = new SeamCarver(writeImg);
-        ChangeListener<Number> resizeListener = resizePrep(scene, primaryStage);
-        createMenu(pane, primaryStage, resizeListener);
-        primaryStage.setTitle("SeamCarver");
-        primaryStage.setScene(scene);
-        primaryStage.show();
+        try {
+            Image img = new Image(SeamCarverWindow.class.getResource("/stretchb.jpg").toExternalForm());
+            WritableImage writeImg = new WritableImage(img.getPixelReader(), (int) img.getWidth(), (int) img.getHeight());
+            imageView = new ImageView(writeImg);
+            Pane pane = new Pane(imageView);
+            Scene scene = new Scene(pane, imageView.getImage().getWidth(), imageView.getImage().getHeight());
+            seamCarver = new SeamCarver(writeImg);
+            ChangeListener<Number> resizeListener = resizePrep(scene, primaryStage);
+            createMenu(pane, primaryStage, resizeListener);
+            primaryStage.setTitle("SeamCarver");
+            primaryStage.getIcons().add(new Image(SeamCarverWindow.class.getResource("/icon.png").toExternalForm()));
+            primaryStage.setScene(scene);
+            primaryStage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="SeamCarverApp.main:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/SeamCarverApp_main_jar</output-path>
+    <root id="archive" name="SeamCarverApp.main.jar">
+      <element id="module-output" name="SeamCarverApp.main" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.openjfx/javafx-graphics/11/a736dd079047ec0b72b8c4970842a5c5e0c19f2f/javafx-graphics-11.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.openjfx/javafx-base/11/4b060dad0affd866df9d959e064faa8a1a2f4af0/javafx-base-11-mac.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.openjfx/javafx-graphics/11/af47a6d3668d3ce1c61e1fe13c44471b6f8d469/javafx-graphics-11-mac.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.openjfx/javafx-base/11/9fcd3e8e3227ec97bf503f7991fad1f3b14d005/javafx-base-11.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.openjfx/javafx-controls/11/e3a24a14e8732abc6dc173f15872dc63e2a32e16/javafx-controls-11-mac.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.openjfx/javafx-swing/11/6fd6f4e3c5f59fa30ca61204877101ed978005aa/javafx-swing-11-mac.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
