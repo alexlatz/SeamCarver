@@ -21,6 +21,12 @@ jlink {
     launcher {
         name = 'SeamCarver'
     }
+    jpackage {
+        installerOptions = [
+                '--description', 'SeamCarver is a application that uses the Seam Carving algorithm to resize images with content-aware scaling.'
+                '--copyright', '© 2020 Alex Latz. All rights reserved.'
+        ]
+    }
 }
 jar {
     manifest {
