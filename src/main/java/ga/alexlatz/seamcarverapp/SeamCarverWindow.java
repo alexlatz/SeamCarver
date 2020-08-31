@@ -43,7 +43,7 @@ public class SeamCarverWindow extends Application {
     @Override
     public void start(Stage primaryStage) throws FileNotFoundException {
         try {
-            Image img = new Image(SeamCarverWindow.class.getResource("/stretchb.jpg").toExternalForm());
+            Image img = new Image(SeamCarverWindow.class.getResource("/splash.png").toExternalForm());
             WritableImage writeImg = new WritableImage(img.getPixelReader(), (int) img.getWidth(), (int) img.getHeight());
             imageView = new ImageView(writeImg);
             Pane pane = new Pane(imageView);
@@ -203,8 +203,7 @@ public class SeamCarverWindow extends Application {
             }
         });
         menuEdit.getItems().addAll(changeHeight, changeWidth);
-        Menu menuView = new Menu("View");
-        menuBar.getMenus().addAll(menuFile, menuEdit, menuView);
+        menuBar.getMenus().addAll(menuFile, menuEdit);
         final String os = System.getProperty("os.name");
         if (os != null && os.startsWith("Mac"))
             menuBar.useSystemMenuBarProperty().set(true);

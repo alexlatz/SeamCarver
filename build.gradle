@@ -23,9 +23,37 @@ jlink {
     }
     jpackage {
         installerOptions = [
-                '--description', 'SeamCarver is a application that uses the Seam Carving algorithm to resize images with content-aware scaling.'
-                '--copyright', '© 2020 Alex Latz. All rights reserved.'
+                '--description', 'SeamCarver is a application that uses the Seam Carving algorithm to resize images with content-aware scaling.',
+                '--copyright', '© 2020 Alex Latz'
         ]
+        installerType = project.findProperty('installerType') // we will pass this from the command line (example: -PinstallerType=msi)
+        if (installerType == 'msi') {
+            imageOptions += ['--icon', 'src/main/resources/icon.ico']
+            installerOptions += [
+                    '--win-per-user-install', '--win-dir-chooser',
+                    '--win-menu'
+            ]
+        }
+        if (installerType == 'dmg') {
+            imageOptions += ['--icon', 'src/main/resources/icon.icns']
+        }
+        if (installerType in ['deb', 'rpm']) {
+            imageOptions += ['--icon', 'src/main/resources/icon.png']
+            installerOptions += [
+                    '--linux-menu-group', 'Office',
+                    '--linux-shortcut'
+            ]
+        }
+        if (installerType == 'deb') {
+            installerOptions += [
+                    '--linux-deb-maintainer', 'alexlatz@pm.me'
+            ]
+        }
+    }
+}
+jpackage {
+    doFirst {
+        project.getProperty('installerType')
     }
 }
 jar {
