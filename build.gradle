@@ -27,7 +27,7 @@ jlink {
                 '--copyright', '© 2020 Alex Latz'
         ]
         installerType = project.findProperty('installerType') // we will pass this from the command line (example: -PinstallerType=msi)
-        if (installerType == 'msi') {
+        if (installerType in ['msi', 'exe']) {
             imageOptions += ['--icon', 'src/main/resources/icon.ico']
             installerOptions += [
                     '--win-per-user-install', '--win-dir-chooser',
