@@ -8,11 +8,13 @@ SeamCarver is a JavaFX application that uses the Seam Carver algorithm to scale 
 To find each seam, the program computes the "energy" value of each pixel as seen in the [MERL research paper](http://graphics.cs.cmu.edu/courses/15-463/2012_fall/hw/proj3-seamcarving/imret.pdf).
 
 Next, a topological sort finds the smallest energy paths from opposite sides, and removes or adds onto it.
+
 ![Shrink and Widen](shrinkwiden.gif)
 
 The main difference between this implementation and many others is its ability to bulk-generate the seams.
 
 The algorithm is designed to generate multiple seams and store past additions and deletions in order to create more coherent images.
+
 ![Diagonal Shrink and Widen](diagonalshrinkwiden.gif)
 
 ## Installation
