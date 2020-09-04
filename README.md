@@ -27,6 +27,21 @@ Then resize the window to live-resize the image, or use the menu to set a specif
 
 You can then export the image to JPEG, PNG, BMP, or GIF formats.
 
+## Building
+SeamCarver requires a dual installation of JDK 11 and 14 in order to package the application. 11 needs to be the main JAVA_HOME.
+
+First, set the environment variable BADASS_JLINK_JAVA_HOME to the JDK 14 installation. 
+
+Then, run 
+```
+gradle jpackage -DinstallerType='insert installer type here'
+```
+(Replace gradle with gradlew.bat on Windows)
+
+Installer types can be exe on Windows, dmg on macOS, and deb or rpm on Linux.
+
+After building, the binaries can be found in SeamCarver/build/jpackage. 
+
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
