@@ -202,6 +202,13 @@ public class SeamCarverWindow extends Application {
                 }
             }
         });
+        MenuItem preserveSection = new MenuItem("Preserve Section...");
+        preserveSection.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                //TODO: functionality
+            }
+        });
         menuEdit.getItems().addAll(changeHeight, changeWidth);
         menuBar.getMenus().addAll(menuFile, menuEdit);
         final String os = System.getProperty("os.name");

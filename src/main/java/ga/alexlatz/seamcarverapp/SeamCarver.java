@@ -6,15 +6,17 @@ import javafx.scene.image.WritableImage;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Stack;
 
 public class SeamCarver {
     private WritableImage image;
     private double[][] energy;
-    private Stack<ArrayList<Integer>> addedSeams;
-    private Stack<ArrayList<Integer>> deletedSeams;
-    private Stack<ArrayList<Integer>> addedFlipped;
-    private Stack<ArrayList<Integer>> deletedFlipped;
+    private final Stack<ArrayList<Integer>> addedSeams;
+    private final Stack<ArrayList<Integer>> deletedSeams;
+    private final Stack<ArrayList<Integer>> addedFlipped;
+    private final Stack<ArrayList<Integer>> deletedFlipped;
+    private ArrayList<ArrayList<Integer>> removalMarked;
     private boolean flipped;
     private boolean override;
 
@@ -47,9 +49,14 @@ public class SeamCarver {
         return image;
     }
 
+    public void setRemovalMarked(ArrayList<ArrayList<Integer>> removalMarked) {
+        this.removalMarked = removalMarked;
+    }
+
     public double energy(final int x, final int y) {
         if (x == 0 || x == width() - 1 || y == 0 || y == height() - 1)
             return 1000;
+        if (removalMarked != null && removalMarked.get(y).contains(x)) return Double.MIN_VALUE;
         PixelReader reader = image.getPixelReader();
         return Math.sqrt(colorDiff(reader.getArgb(x + 1, y), reader.getArgb(x - 1, y))
                 + colorDiff(reader.getArgb(x, y + 1), reader.getArgb(x, y - 1)));
@@ -126,7 +133,6 @@ public class SeamCarver {
     }
 
     private int checkStack(Stack<ArrayList<Integer>> seamStack, int num, int[][] seams, boolean[][] usedPixels) {
-        //TODO: something wrong with stack removal (all 0)
         int startFrom = 0;
         if (seamStack.size() > 0) {
             int n = seamStack.size();
@@ -189,6 +195,18 @@ public class SeamCarver {
             int curRow = 0;
             for (int x = 0; x < width(); x++) {
                 if (Arrays.binarySearch(seam[y], x) < 0) writer.setArgb(curRow++, y, reader.getArgb(x, y));
+            }
+            if (removalMarked != null) {
+                Collections.sort(removalMarked.get(y));
+                ArrayList<Integer> yList = removalMarked.get(y);
+                for (int i = 0; i < seam[0].length; i++) {
+                    int result = Collections.binarySearch(yList, seam[y][i]);
+                    if (result > 0 && yList.get(result) == seam[y][i]) yList.remove(result);
+                    else result = Math.abs(result) - 1;
+                    for (int j = result; j < yList.size(); j++) {
+                        yList.set(j, yList.get(j) - 1);
+                    }
+                }
             }
         }
         image = newPic;
@@ -253,6 +271,17 @@ public class SeamCarver {
                     }
                 }
             }
+            if (removalMarked != null) {
+                Collections.sort(removalMarked.get(y));
+                ArrayList<Integer> yList = removalMarked.get(y);
+                for (int i = 0; i < seam[0].length; i++) {
+                    int result = Collections.binarySearch(yList, seam[y][i]);
+                    if (result < 0) result = Math.abs(result) - 1;
+                    for (int j = result; j < yList.size(); j++) {
+                        yList.set(j, yList.get(j) + 1);
+                    }
+                }
+            }
         }
         image = newPic;
         for (int y = 0; y < energy[0].length; y++) {
@@ -294,6 +323,14 @@ public class SeamCarver {
                 if (x >= energy.length || y >= energy[0].length) newEnergy[y][x] = energy(x, y);
                 else newEnergy[y][x] = energy[x][y];
             }
+        }
+        if (removalMarked != null) {
+            ArrayList<ArrayList<Integer>> newMarked = new ArrayList<>();
+            for (int x = 0; x < width(); x++) newMarked.add(new ArrayList<>());
+            for (int y = 0; y < height(); y++) {
+                for (int x : removalMarked.get(y)) newMarked.get(x).add(y);
+            }
+            removalMarked = newMarked;
         }
         image = flipped;
         energy = newEnergy;
