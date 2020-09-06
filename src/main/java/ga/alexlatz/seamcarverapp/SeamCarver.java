@@ -17,6 +17,7 @@ public class SeamCarver {
     private final Stack<ArrayList<Integer>> addedFlipped;
     private final Stack<ArrayList<Integer>> deletedFlipped;
     private ArrayList<ArrayList<Integer>> removalMarked;
+    private ArrayList<ArrayList<Integer>> preserveMarked;
     private boolean flipped;
     private boolean override;
 
@@ -53,10 +54,15 @@ public class SeamCarver {
         this.removalMarked = removalMarked;
     }
 
+    public void setPreserveMarked(ArrayList<ArrayList<Integer>> preserveMarked) {
+        this.preserveMarked = preserveMarked;
+    }
+
     public double energy(final int x, final int y) {
         if (x == 0 || x == width() - 1 || y == 0 || y == height() - 1)
             return 1000;
         if (removalMarked != null && removalMarked.get(y).contains(x)) return Double.MIN_VALUE;
+        if (preserveMarked != null && preserveMarked.get(y).contains(x)) return Double.MAX_VALUE;
         PixelReader reader = image.getPixelReader();
         return Math.sqrt(colorDiff(reader.getArgb(x + 1, y), reader.getArgb(x - 1, y))
                 + colorDiff(reader.getArgb(x, y + 1), reader.getArgb(x, y - 1)));
@@ -66,7 +72,7 @@ public class SeamCarver {
         int[][] seams = new int[height()][num];
         boolean[][] usedPixels = new boolean[height()][width()];
         double[][] energyTo = new double[width()][height()];
-        int startFrom = 0;
+        int startFrom;
         if (!flipped)
             startFrom = delete ? checkStack(addedSeams, num, seams, usedPixels) : checkStack(deletedSeams, num, seams, usedPixels);
         else
@@ -208,6 +214,7 @@ public class SeamCarver {
                     }
                 }
             }
+            noRemoveAdjust(seam, y, preserveMarked, -1);
         }
         image = newPic;
         for (int y = 0; y < energy[0].length; y++) {
@@ -271,17 +278,8 @@ public class SeamCarver {
                     }
                 }
             }
-            if (removalMarked != null) {
-                Collections.sort(removalMarked.get(y));
-                ArrayList<Integer> yList = removalMarked.get(y);
-                for (int i = 0; i < seam[0].length; i++) {
-                    int result = Collections.binarySearch(yList, seam[y][i]);
-                    if (result < 0) result = Math.abs(result) - 1;
-                    for (int j = result; j < yList.size(); j++) {
-                        yList.set(j, yList.get(j) + 1);
-                    }
-                }
-            }
+            noRemoveAdjust(seam, y, removalMarked, 1);
+            noRemoveAdjust(seam, y, preserveMarked, 1);
         }
         image = newPic;
         for (int y = 0; y < energy[0].length; y++) {
@@ -306,6 +304,20 @@ public class SeamCarver {
         override = false;
     }
 
+    private void noRemoveAdjust(int[][] seam, int y, ArrayList<ArrayList<Integer>> marked, int amt) {
+        if (marked != null) {
+            Collections.sort(marked.get(y));
+            ArrayList<Integer> yList = marked.get(y);
+            for (int i = 0; i < seam[0].length; i++) {
+                int result = Collections.binarySearch(yList, seam[y][i]);
+                if (result < 0) result = Math.abs(result) - 1;
+                for (int j = result; j < yList.size(); j++) {
+                    yList.set(j, yList.get(j) + amt);
+                }
+            }
+        }
+    }
+
     public void addHorizontalSeam(int num) {
         if (!flipped) transpose();
         override = true;
@@ -324,17 +336,23 @@ public class SeamCarver {
                 else newEnergy[y][x] = energy[x][y];
             }
         }
-        if (removalMarked != null) {
-            ArrayList<ArrayList<Integer>> newMarked = new ArrayList<>();
-            for (int x = 0; x < width(); x++) newMarked.add(new ArrayList<>());
-            for (int y = 0; y < height(); y++) {
-                for (int x : removalMarked.get(y)) newMarked.get(x).add(y);
-            }
-            removalMarked = newMarked;
-        }
+        removalMarked = transposeMarked(removalMarked);
+        preserveMarked = transposeMarked(preserveMarked);
         image = flipped;
         energy = newEnergy;
         this.flipped = !this.flipped;
+    }
+
+    private ArrayList<ArrayList<Integer>> transposeMarked(ArrayList<ArrayList<Integer>> marked) {
+        if (marked != null) {
+            ArrayList<ArrayList<Integer>> newMarked = new ArrayList<>();
+            for (int x = 0; x < width(); x++) newMarked.add(new ArrayList<>());
+            for (int y = 0; y < height(); y++) {
+                for (int x : marked.get(y)) newMarked.get(x).add(y);
+            }
+            return newMarked;
+        }
+        return null;
     }
 
     private void relax(double[][] energyTo, final int x, final int y, final int x2, final int y2) {
