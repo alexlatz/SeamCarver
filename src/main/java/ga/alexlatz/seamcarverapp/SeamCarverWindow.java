@@ -8,6 +8,8 @@ import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -16,7 +18,10 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCombination;
-import javafx.scene.layout.Pane;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -41,23 +46,20 @@ public class SeamCarverWindow extends Application {
     }
 
     @Override
-    public void start(Stage primaryStage) throws FileNotFoundException {
-        try {
-            Image img = new Image(SeamCarverWindow.class.getResource("/splash.png").toExternalForm());
-            WritableImage writeImg = new WritableImage(img.getPixelReader(), (int) img.getWidth(), (int) img.getHeight());
-            imageView = new ImageView(writeImg);
-            Pane pane = new Pane(imageView);
-            Scene scene = new Scene(pane, imageView.getImage().getWidth(), imageView.getImage().getHeight());
-            seamCarver = new SeamCarver(writeImg);
-            ChangeListener<Number> resizeListener = resizePrep(scene, primaryStage);
-            createMenu(pane, primaryStage, resizeListener);
-            primaryStage.setTitle("SeamCarver");
-            primaryStage.getIcons().add(new Image(SeamCarverWindow.class.getResource("/icon.png").toExternalForm()));
-            primaryStage.setScene(scene);
-            primaryStage.show();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    public void start(Stage primaryStage) {
+        Image img = new Image(SeamCarverWindow.class.getResource("/splash.png").toExternalForm());
+        WritableImage writeImg = new WritableImage(img.getPixelReader(), (int) img.getWidth(), (int) img.getHeight());
+        imageView = new ImageView(writeImg);
+        StackPane pane = new StackPane(imageView);
+        BorderPane borderPane = new BorderPane(pane);
+        seamCarver = new SeamCarver(writeImg);
+        Scene scene = new Scene(borderPane, imageView.getImage().getWidth(), imageView.getImage().getHeight());
+        ChangeListener<Number> resizeListener = resizePrep(scene, primaryStage);
+        borderPane.setTop(createMenu(pane, primaryStage, resizeListener));
+        primaryStage.setTitle("SeamCarver");
+        primaryStage.getIcons().add(new Image(SeamCarverWindow.class.getResource("/icon.png").toExternalForm()));
+        primaryStage.setScene(scene);
+        primaryStage.show();
     }
 
     @Override
@@ -101,7 +103,7 @@ public class SeamCarverWindow extends Application {
         return resizeListener;
     }
 
-    public void createMenu(Pane pane, Stage primaryStage, ChangeListener<Number> resizeListener) {
+    public MenuBar createMenu(StackPane pane, Stage primaryStage, ChangeListener<Number> resizeListener) {
         MenuBar menuBar = new MenuBar();
         Menu menuFile = new Menu("File");
         MenuItem openFile = new MenuItem("Open...");
@@ -206,15 +208,24 @@ public class SeamCarverWindow extends Application {
         preserveSection.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                //TODO: functionality
+                Canvas canvas = new Canvas(seamCarver.width(), seamCarver.height());
+                GraphicsContext gc = canvas.getGraphicsContext2D();
+                pane.getChildren().add(canvas);
+                canvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent mouseEvent) {
+                        gc.setFill(Color.RED);
+                        gc.rect(mouseEvent.getX()-5, mouseEvent.getY()-5, 10, 10);
+                    }
+                });
             }
         });
-        menuEdit.getItems().addAll(changeHeight, changeWidth);
+        menuEdit.getItems().addAll(changeHeight, changeWidth, preserveSection);
         menuBar.getMenus().addAll(menuFile, menuEdit);
         final String os = System.getProperty("os.name");
         if (os != null && os.startsWith("Mac"))
             menuBar.useSystemMenuBarProperty().set(true);
-        pane.getChildren().addAll(menuBar);
+        return menuBar;
     }
 
     private void saveFile(File save) {

@@ -58,6 +58,14 @@ public class SeamCarver {
         this.preserveMarked = preserveMarked;
     }
 
+    public ArrayList<ArrayList<Integer>> getRemovalMarked() {
+        return removalMarked;
+    }
+
+    public ArrayList<ArrayList<Integer>> getPreserveMarked() {
+        return preserveMarked;
+    }
+
     public double energy(final int x, final int y) {
         if (x == 0 || x == width() - 1 || y == 0 || y == height() - 1)
             return 1000;
