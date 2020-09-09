@@ -10,10 +10,7 @@ import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
@@ -32,6 +29,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -40,6 +38,9 @@ public class SeamCarverWindow extends Application {
     ImageView imageView;
     SeamCarver seamCarver;
     File path;
+    ArrayList<ArrayList<Integer>> removalMarked;
+    ArrayList<ArrayList<Integer>> preserveMarked;
+    Canvas canvas;
 
     public static void main(String[] args) {
         launch(args);
@@ -92,6 +93,8 @@ public class SeamCarverWindow extends Application {
                             else seamCarver.addHorizontalSeam(Math.abs(verticalDiff) + 1);
                             System.out.println("changed " + verticalDiff + " horizontal seams");
                         }
+                        if (removalMarked != null) removalMarked = seamCarver.getRemovalMarked();
+                        if (preserveMarked != null) preserveMarked = seamCarver.getPreserveMarked();
                         imageView.setImage(seamCarver.image());
                     }
                 };
@@ -204,28 +207,78 @@ public class SeamCarverWindow extends Application {
                 }
             }
         });
-        MenuItem preserveSection = new MenuItem("Preserve Section...");
-        preserveSection.setOnAction(new EventHandler<ActionEvent>() {
+        CheckMenuItem selectRemoveArea = new CheckMenuItem("Enable Area Selection for Removal");
+        selectRemoveArea.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                Canvas canvas = new Canvas(seamCarver.width(), seamCarver.height());
-                GraphicsContext gc = canvas.getGraphicsContext2D();
-                pane.getChildren().add(canvas);
-                canvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
-                    @Override
-                    public void handle(MouseEvent mouseEvent) {
-                        gc.setFill(Color.RED);
-                        gc.rect(mouseEvent.getX()-5, mouseEvent.getY()-5, 10, 10);
+                if (selectRemoveArea.isSelected()) {
+                    canvas = new Canvas(seamCarver.width(), seamCarver.height());
+                    GraphicsContext gc = canvas.getGraphicsContext2D();
+                    pane.getChildren().add(canvas);
+                    canvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
+                        @Override
+                        public void handle(MouseEvent mouseEvent) {
+                            createMouseEvent(mouseEvent, removalMarked, new Color(1.0f, 0f, 0f, 0.05f));
+                            seamCarver.setRemovalMarked(removalMarked);
+                        }
+                    });
+                    if (removalMarked == null) {
+                        removalMarked = new ArrayList<>();
+                        for (int y = 0; y < seamCarver.height(); y++) {
+                            removalMarked.add(new ArrayList<>());
+                        }
                     }
-                });
+                } else {
+                    pane.getChildren().removeAll(canvas);
+                }
             }
         });
-        menuEdit.getItems().addAll(changeHeight, changeWidth, preserveSection);
+        CheckMenuItem selectPreserveArea = new CheckMenuItem("Enable Area Selection for Preservation");
+        selectPreserveArea.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                if (selectPreserveArea.isSelected()) {
+                    canvas = new Canvas(seamCarver.width(), seamCarver.height());
+                    GraphicsContext gc = canvas.getGraphicsContext2D();
+                    pane.getChildren().add(canvas);
+                    canvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
+                        @Override
+                        public void handle(MouseEvent mouseEvent) {
+                            createMouseEvent(mouseEvent, preserveMarked, new Color(0f, 0f, 1.0f, 0.05f));
+                            seamCarver.setPreserveMarked(preserveMarked);
+                        }
+                    });
+                    if (preserveMarked == null) {
+                        preserveMarked = new ArrayList<>();
+                        for (int y = 0; y < seamCarver.height(); y++) {
+                            preserveMarked.add(new ArrayList<>());
+                        }
+                    }
+                } else {
+                    pane.getChildren().removeAll(canvas);
+                }
+            }
+        });
+        menuEdit.getItems().addAll(changeHeight, changeWidth, selectRemoveArea, selectPreserveArea);
         menuBar.getMenus().addAll(menuFile, menuEdit);
         final String os = System.getProperty("os.name");
         if (os != null && os.startsWith("Mac"))
             menuBar.useSystemMenuBarProperty().set(true);
         return menuBar;
+    }
+
+    private void createMouseEvent(MouseEvent mouseEvent, ArrayList<ArrayList<Integer>> preserveMarked, Color color) {
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+        gc.setFill(color);
+        gc.fillRect(mouseEvent.getX() - 5, mouseEvent.getY() - 5, 10, 10);
+        for (int y = 0; y < 10; y++) {
+            ArrayList<Integer> yList = preserveMarked.get((int) (mouseEvent.getY() - 10 + y));
+            for (int x = 0; x < 10; x++) {
+                if (!yList.contains((int) (mouseEvent.getX() - 10 + x))) {
+                    yList.add((int) (mouseEvent.getX() - 10 + x));
+                }
+            }
+        }
     }
 
     private void saveFile(File save) {

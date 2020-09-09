@@ -52,6 +52,9 @@ public class SeamCarver {
 
     public void setRemovalMarked(ArrayList<ArrayList<Integer>> removalMarked) {
         this.removalMarked = removalMarked;
+        for (int y = 0; y < height(); y++) {
+            for (int x : removalMarked.get(y)) energy[x][y] = energy(x, y);
+        }
     }
 
     public void setPreserveMarked(ArrayList<ArrayList<Integer>> preserveMarked) {
@@ -69,8 +72,10 @@ public class SeamCarver {
     public double energy(final int x, final int y) {
         if (x == 0 || x == width() - 1 || y == 0 || y == height() - 1)
             return 1000;
-        if (removalMarked != null && removalMarked.get(y).contains(x)) return Double.MIN_VALUE;
-        if (preserveMarked != null && preserveMarked.get(y).contains(x)) return Double.MAX_VALUE;
+        if (removalMarked != null && removalMarked.get(y).contains(x)) {
+            return -10000;
+        }
+        if (preserveMarked != null && preserveMarked.get(y).contains(x)) return 10000;
         PixelReader reader = image.getPixelReader();
         return Math.sqrt(colorDiff(reader.getArgb(x + 1, y), reader.getArgb(x - 1, y))
                 + colorDiff(reader.getArgb(x, y + 1), reader.getArgb(x, y - 1)));
@@ -215,7 +220,7 @@ public class SeamCarver {
                 ArrayList<Integer> yList = removalMarked.get(y);
                 for (int i = 0; i < seam[0].length; i++) {
                     int result = Collections.binarySearch(yList, seam[y][i]);
-                    if (result > 0 && yList.get(result) == seam[y][i]) yList.remove(result);
+                    if (result >= 0 && yList.get(result) == seam[y][i]) yList.remove(result);
                     else result = Math.abs(result) - 1;
                     for (int j = result; j < yList.size(); j++) {
                         yList.set(j, yList.get(j) - 1);
