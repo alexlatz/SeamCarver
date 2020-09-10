@@ -16,7 +16,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
@@ -40,7 +40,10 @@ public class SeamCarverWindow extends Application {
     File path;
     ArrayList<ArrayList<Integer>> removalMarked;
     ArrayList<ArrayList<Integer>> preserveMarked;
-    Canvas canvas;
+    final Color preserveColor = new Color(0f, 0f, 1.0f, 0.5f);
+    final Color removeColor = new Color(1.0f, 0f, 0f, 0.5f);
+    Canvas preserveCanvas;
+    Canvas removeCanvas;
 
     public static void main(String[] args) {
         launch(args);
@@ -51,12 +54,12 @@ public class SeamCarverWindow extends Application {
         Image img = new Image(SeamCarverWindow.class.getResource("/splash.png").toExternalForm());
         WritableImage writeImg = new WritableImage(img.getPixelReader(), (int) img.getWidth(), (int) img.getHeight());
         imageView = new ImageView(writeImg);
-        StackPane pane = new StackPane(imageView);
-        BorderPane borderPane = new BorderPane(pane);
+        Pane pane = new Pane(imageView);
         seamCarver = new SeamCarver(writeImg);
-        Scene scene = new Scene(borderPane, imageView.getImage().getWidth(), imageView.getImage().getHeight());
+        StackPane stackPane = new StackPane(pane);
+        Scene scene = new Scene(stackPane, imageView.getImage().getWidth(), imageView.getImage().getHeight());
         ChangeListener<Number> resizeListener = resizePrep(scene, primaryStage);
-        borderPane.setTop(createMenu(pane, primaryStage, resizeListener));
+        pane.getChildren().add(createMenu(pane, primaryStage, resizeListener));
         primaryStage.setTitle("SeamCarver");
         primaryStage.getIcons().add(new Image(SeamCarverWindow.class.getResource("/icon.png").toExternalForm()));
         primaryStage.setScene(scene);
@@ -93,8 +96,14 @@ public class SeamCarverWindow extends Application {
                             else seamCarver.addHorizontalSeam(Math.abs(verticalDiff) + 1);
                             System.out.println("changed " + verticalDiff + " horizontal seams");
                         }
-                        if (removalMarked != null) removalMarked = seamCarver.getRemovalMarked();
-                        if (preserveMarked != null) preserveMarked = seamCarver.getPreserveMarked();
+                        if (removalMarked != null) {
+                            removalMarked = seamCarver.getRemovalMarked();
+                            resizeCanvas(removeCanvas, removalMarked, removeColor);
+                        }
+                        if (preserveMarked != null) {
+                            preserveMarked = seamCarver.getPreserveMarked();
+                            resizeCanvas(preserveCanvas, preserveMarked, preserveColor);
+                        }
                         imageView.setImage(seamCarver.image());
                     }
                 };
@@ -106,7 +115,7 @@ public class SeamCarverWindow extends Application {
         return resizeListener;
     }
 
-    public MenuBar createMenu(StackPane pane, Stage primaryStage, ChangeListener<Number> resizeListener) {
+    public MenuBar createMenu(Pane pane, Stage primaryStage, ChangeListener<Number> resizeListener) {
         MenuBar menuBar = new MenuBar();
         Menu menuFile = new Menu("File");
         MenuItem openFile = new MenuItem("Open...");
@@ -212,13 +221,15 @@ public class SeamCarverWindow extends Application {
             @Override
             public void handle(ActionEvent event) {
                 if (selectRemoveArea.isSelected()) {
-                    canvas = new Canvas(seamCarver.width(), seamCarver.height());
-                    GraphicsContext gc = canvas.getGraphicsContext2D();
-                    pane.getChildren().add(canvas);
-                    canvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
+                    if (removeCanvas == null) removeCanvas = new Canvas(seamCarver.width(), seamCarver.height());
+                    else if (removeCanvas.getHeight() != seamCarver.height() || removeCanvas.getWidth() != seamCarver.width())
+                        resizeCanvas(removeCanvas, removalMarked, removeColor);
+                    GraphicsContext gc = removeCanvas.getGraphicsContext2D();
+                    pane.getChildren().add(removeCanvas);
+                    removeCanvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
                         @Override
                         public void handle(MouseEvent mouseEvent) {
-                            createMouseEvent(mouseEvent, removalMarked, new Color(1.0f, 0f, 0f, 0.05f));
+                            createMouseEvent(mouseEvent, removalMarked, removeColor, removeCanvas.getGraphicsContext2D());
                             seamCarver.setRemovalMarked(removalMarked);
                         }
                     });
@@ -229,7 +240,7 @@ public class SeamCarverWindow extends Application {
                         }
                     }
                 } else {
-                    pane.getChildren().removeAll(canvas);
+                    pane.getChildren().removeAll(removeCanvas);
                 }
             }
         });
@@ -238,13 +249,15 @@ public class SeamCarverWindow extends Application {
             @Override
             public void handle(ActionEvent event) {
                 if (selectPreserveArea.isSelected()) {
-                    canvas = new Canvas(seamCarver.width(), seamCarver.height());
-                    GraphicsContext gc = canvas.getGraphicsContext2D();
-                    pane.getChildren().add(canvas);
-                    canvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
+                    if (preserveCanvas == null) preserveCanvas = new Canvas(seamCarver.width(), seamCarver.height());
+                    else if (preserveCanvas.getHeight() != seamCarver.height() || preserveCanvas.getWidth() != seamCarver.width())
+                        resizeCanvas(preserveCanvas, preserveMarked, preserveColor);
+                    GraphicsContext gc = preserveCanvas.getGraphicsContext2D();
+                    pane.getChildren().add(preserveCanvas);
+                    preserveCanvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
                         @Override
                         public void handle(MouseEvent mouseEvent) {
-                            createMouseEvent(mouseEvent, preserveMarked, new Color(0f, 0f, 1.0f, 0.05f));
+                            createMouseEvent(mouseEvent, preserveMarked, preserveColor, preserveCanvas.getGraphicsContext2D());
                             seamCarver.setPreserveMarked(preserveMarked);
                         }
                     });
@@ -255,7 +268,7 @@ public class SeamCarverWindow extends Application {
                         }
                     }
                 } else {
-                    pane.getChildren().removeAll(canvas);
+                    pane.getChildren().removeAll(preserveCanvas);
                 }
             }
         });
@@ -267,16 +280,29 @@ public class SeamCarverWindow extends Application {
         return menuBar;
     }
 
-    private void createMouseEvent(MouseEvent mouseEvent, ArrayList<ArrayList<Integer>> preserveMarked, Color color) {
-        GraphicsContext gc = canvas.getGraphicsContext2D();
+    private void createMouseEvent(MouseEvent mouseEvent, ArrayList<ArrayList<Integer>> marked, Color color, GraphicsContext gc) {
         gc.setFill(color);
-        gc.fillRect(mouseEvent.getX() - 5, mouseEvent.getY() - 5, 10, 10);
         for (int y = 0; y < 10; y++) {
-            ArrayList<Integer> yList = preserveMarked.get((int) (mouseEvent.getY() - 10 + y));
+            int newY = (int) (mouseEvent.getY() - 10 + y);
+            ArrayList<Integer> yList = marked.get(newY);
             for (int x = 0; x < 10; x++) {
-                if (!yList.contains((int) (mouseEvent.getX() - 10 + x))) {
-                    yList.add((int) (mouseEvent.getX() - 10 + x));
+                int newX = (int) (mouseEvent.getX() - 10 + x);
+                if (!yList.contains(newX)) {
+                    gc.fillRect(newX, newY, 1, 1);
+                    yList.add(newX);
                 }
+            }
+        }
+    }
+
+    private void resizeCanvas(Canvas canvas, ArrayList<ArrayList<Integer>> marked, Color color) {
+        if (canvas == null) return;
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        gc.setFill(color);
+        for (int y = 0; y < marked.size(); y++) {
+            for (int x : marked.get(y)) {
+                gc.fillRect(x, y, 1, 1);
             }
         }
     }

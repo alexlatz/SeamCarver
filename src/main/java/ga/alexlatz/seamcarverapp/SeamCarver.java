@@ -59,6 +59,9 @@ public class SeamCarver {
 
     public void setPreserveMarked(ArrayList<ArrayList<Integer>> preserveMarked) {
         this.preserveMarked = preserveMarked;
+        for (int y = 0; y < height(); y++) {
+            for (int x : preserveMarked.get(y)) energy[x][y] = energy(x, y);
+        }
     }
 
     public ArrayList<ArrayList<Integer>> getRemovalMarked() {
@@ -70,12 +73,10 @@ public class SeamCarver {
     }
 
     public double energy(final int x, final int y) {
+        if (preserveMarked != null && preserveMarked.get(y).contains(x)) return 10000;
+        if (removalMarked != null && removalMarked.get(y).contains(x)) return -10000;
         if (x == 0 || x == width() - 1 || y == 0 || y == height() - 1)
             return 1000;
-        if (removalMarked != null && removalMarked.get(y).contains(x)) {
-            return -10000;
-        }
-        if (preserveMarked != null && preserveMarked.get(y).contains(x)) return 10000;
         PixelReader reader = image.getPixelReader();
         return Math.sqrt(colorDiff(reader.getArgb(x + 1, y), reader.getArgb(x - 1, y))
                 + colorDiff(reader.getArgb(x, y + 1), reader.getArgb(x, y - 1)));
