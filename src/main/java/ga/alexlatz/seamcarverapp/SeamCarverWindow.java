@@ -5,8 +5,6 @@ import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.embed.swing.SwingFXUtils;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -73,7 +71,7 @@ public class SeamCarverWindow extends Application {
     }
 
     public ChangeListener<Number> resizePrep(Scene scene, Stage primaryStage) {
-        final ChangeListener<Number> resizeListener = new ChangeListener<Number>() {
+        final ChangeListener<Number> resizeListener = new ChangeListener<>() {
             final Timer timer = new Timer();
             final long delayTime = 200;
             TimerTask task = null;
@@ -120,160 +118,171 @@ public class SeamCarverWindow extends Application {
         Menu menuFile = new Menu("File");
         MenuItem openFile = new MenuItem("Open...");
         openFile.setAccelerator(KeyCombination.keyCombination("SHORTCUT+O"));
-        openFile.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                FileChooser fileChooser = new FileChooser();
-                fileChooser.setTitle("Choose an image");
-                fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
-                File file = fileChooser.showOpenDialog(primaryStage);
-                try {
-                    imageView.setImage(new Image(new FileInputStream(file)));
-                    path = file;
-                    Image img = imageView.getImage();
-                    seamCarver = new SeamCarver(new WritableImage(img.getPixelReader(), (int) img.getWidth(), (int) img.getHeight()));
-                    primaryStage.widthProperty().removeListener(resizeListener);
-                    primaryStage.heightProperty().removeListener(resizeListener);
-                    primaryStage.setHeight(seamCarver.height());
-                    primaryStage.setWidth(seamCarver.width());
-                    primaryStage.widthProperty().addListener(resizeListener);
-                    primaryStage.heightProperty().addListener(resizeListener);
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                }
+        openFile.setOnAction(event -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Choose an image");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
+            File file = fileChooser.showOpenDialog(primaryStage);
+            try {
+                imageView.setImage(new Image(new FileInputStream(file)));
+                path = file;
+                Image img = imageView.getImage();
+                seamCarver = new SeamCarver(new WritableImage(img.getPixelReader(), (int) img.getWidth(), (int) img.getHeight()));
+                primaryStage.widthProperty().removeListener(resizeListener);
+                primaryStage.heightProperty().removeListener(resizeListener);
+                primaryStage.setHeight(seamCarver.height());
+                primaryStage.setWidth(seamCarver.width());
+                primaryStage.widthProperty().addListener(resizeListener);
+                primaryStage.heightProperty().addListener(resizeListener);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
             }
         });
         MenuItem saveImage = new MenuItem("Save");
         saveImage.setAccelerator(KeyCombination.keyCombination("SHORTCUT+S"));
-        saveImage.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                if (path != null) {
-                    saveFile(path);
-                }
+        saveImage.setOnAction(event -> {
+            if (path != null) {
+                saveFile(path);
             }
         });
         MenuItem saveAsImage = new MenuItem("Save As...");
         saveAsImage.setAccelerator(KeyCombination.keyCombination("SHORTCUT+SHIFT+S"));
-        saveAsImage.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                FileChooser fileChooser = new FileChooser();
-                fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
-                File save = fileChooser.showSaveDialog(primaryStage);
-                saveFile(save);
-            }
+        saveAsImage.setOnAction(actionEvent -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
+            File save = fileChooser.showSaveDialog(primaryStage);
+            saveFile(save);
         });
         MenuItem quit = new MenuItem("Quit");
         quit.setAccelerator(KeyCombination.keyCombination("SHORTCUT+Q"));
-        quit.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                stop();
-            }
-        });
+        quit.setOnAction(actionEvent -> stop());
         menuFile.getItems().addAll(openFile, saveImage, saveAsImage, quit);
+        Menu menuSelection = new Menu("Selection");
         Menu menuEdit = new Menu("Edit");
         MenuItem changeHeight = new MenuItem("Change Height...");
-        changeHeight.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                TextInputDialog dialog = new TextInputDialog(String.valueOf(seamCarver.height()));
-                dialog.initStyle(StageStyle.UNDECORATED);
-                dialog.setTitle("Set Height");
-                dialog.setHeaderText("Change the height of the image by entering any number");
-                dialog.setContentText("Enter the new height here:");
-                Optional<String> result = dialog.showAndWait();
-                if (result.isPresent()) {
-                    int s = seamCarver.height() - Integer.parseInt(result.get());
-                    if (s < 0) seamCarver.addHorizontalSeam(Math.abs(s));
-                    else seamCarver.removeHorizontalSeam(s);
-                    imageView.setImage(seamCarver.image());
-                    primaryStage.heightProperty().removeListener(resizeListener);
-                    primaryStage.setHeight(seamCarver.height());
-                    primaryStage.heightProperty().addListener(resizeListener);
-                }
+        changeHeight.setOnAction(event -> {
+            TextInputDialog dialog = new TextInputDialog(String.valueOf(seamCarver.height()));
+            dialog.initStyle(StageStyle.UNDECORATED);
+            dialog.setTitle("Set Height");
+            dialog.setHeaderText("Change the height of the image by entering any number");
+            dialog.setContentText("Enter the new height here:");
+            Optional<String> result = dialog.showAndWait();
+            if (result.isPresent()) {
+                int s = seamCarver.height() - Integer.parseInt(result.get());
+                if (s < 0) seamCarver.addHorizontalSeam(Math.abs(s));
+                else seamCarver.removeHorizontalSeam(s);
+                imageView.setImage(seamCarver.image());
+                primaryStage.heightProperty().removeListener(resizeListener);
+                primaryStage.setHeight(seamCarver.height());
+                primaryStage.heightProperty().addListener(resizeListener);
             }
         });
         MenuItem changeWidth = new MenuItem("Change Width...");
-        changeWidth.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                TextInputDialog dialog = new TextInputDialog(String.valueOf(seamCarver.width()));
-                dialog.initStyle(StageStyle.UNDECORATED);
-                dialog.setTitle("Set Width");
-                dialog.setHeaderText("Change the width of the image by entering any number");
-                dialog.setContentText("Enter the new width here:");
-                Optional<String> result = dialog.showAndWait();
-                if (result.isPresent()) {
-                    int s = seamCarver.width() - Integer.parseInt(result.get());
-                    if (s < 0) seamCarver.addVerticalSeam(Math.abs(s));
-                    else seamCarver.removeVerticalSeam(s);
-                    imageView.setImage(seamCarver.image());
-                    primaryStage.widthProperty().removeListener(resizeListener);
-                    primaryStage.setWidth(seamCarver.width());
-                    primaryStage.widthProperty().addListener(resizeListener);
+        changeWidth.setOnAction(event -> {
+            TextInputDialog dialog = new TextInputDialog(String.valueOf(seamCarver.width()));
+            dialog.initStyle(StageStyle.UNDECORATED);
+            dialog.setTitle("Set Width");
+            dialog.setHeaderText("Change the width of the image by entering any number");
+            dialog.setContentText("Enter the new width here:");
+            Optional<String> result = dialog.showAndWait();
+            if (result.isPresent()) {
+                int s = seamCarver.width() - Integer.parseInt(result.get());
+                if (s < 0) seamCarver.addVerticalSeam(Math.abs(s));
+                else seamCarver.removeVerticalSeam(s);
+                imageView.setImage(seamCarver.image());
+                primaryStage.widthProperty().removeListener(resizeListener);
+                primaryStage.setWidth(seamCarver.width());
+                primaryStage.widthProperty().addListener(resizeListener);
+            }
+        });
+        CheckMenuItem viewRemoveArea = new CheckMenuItem("View Selected Area for Removal");
+        CheckMenuItem viewPreserveArea = new CheckMenuItem("View Selected Area for Preservation");
+        viewRemoveArea.setOnAction(event -> {
+            if (viewRemoveArea.isSelected()) {
+                if (!menuBar.getMenus().contains(menuSelection)) menuBar.getMenus().add(menuSelection);
+                if (removeCanvas == null) removeCanvas = new Canvas(seamCarver.width(), seamCarver.height());
+                else if (removeCanvas.getHeight() != seamCarver.height() || removeCanvas.getWidth() != seamCarver.width())
+                    resizeCanvas(removeCanvas, removalMarked, removeColor);
+                pane.getChildren().add(removeCanvas);
+            } else {
+                pane.getChildren().remove(removeCanvas);
+                if (!viewPreserveArea.isSelected()) menuBar.getMenus().remove(menuSelection);
+            }
+        });
+        viewPreserveArea.setOnAction(event -> {
+            if (viewPreserveArea.isSelected()) {
+                if (!menuBar.getMenus().contains(menuSelection)) menuBar.getMenus().add(menuSelection);
+                if (preserveCanvas == null) preserveCanvas = new Canvas(seamCarver.width(), seamCarver.height());
+                else if (preserveCanvas.getHeight() != seamCarver.height() || preserveCanvas.getWidth() != seamCarver.width())
+                    resizeCanvas(preserveCanvas, preserveMarked, preserveColor);
+                pane.getChildren().add(preserveCanvas);
+            } else {
+                pane.getChildren().remove(preserveCanvas);
+                if (!viewRemoveArea.isSelected()) menuBar.getMenus().remove(menuSelection);
+            }
+        });
+        CheckMenuItem selectRemoveArea = new CheckMenuItem("Select Area for Removal");
+        CheckMenuItem selectPreserveArea = new CheckMenuItem("Select Area for Preservation");
+        selectRemoveArea.setOnAction(event -> {
+            if (selectPreserveArea.isSelected()) selectPreserveArea.setSelected(false);
+            if (selectRemoveArea.isSelected()) {
+                if (!viewRemoveArea.isSelected()) {
+                    viewRemoveArea.setSelected(true);
+                    viewRemoveArea.fire();
+                }
+                removeCanvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, mouseEvent -> {
+                    createMouseEvent(mouseEvent, removalMarked, removeColor, removeCanvas.getGraphicsContext2D());
+                    seamCarver.setRemovalMarked(removalMarked);
+                });
+                if (removalMarked == null) {
+                    removalMarked = new ArrayList<>();
+                    for (int y = 0; y < seamCarver.height(); y++) {
+                        removalMarked.add(new ArrayList<>());
+                    }
                 }
             }
         });
-        CheckMenuItem selectRemoveArea = new CheckMenuItem("Enable Area Selection for Removal");
-        selectRemoveArea.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                if (selectRemoveArea.isSelected()) {
-                    if (removeCanvas == null) removeCanvas = new Canvas(seamCarver.width(), seamCarver.height());
-                    else if (removeCanvas.getHeight() != seamCarver.height() || removeCanvas.getWidth() != seamCarver.width())
-                        resizeCanvas(removeCanvas, removalMarked, removeColor);
-                    GraphicsContext gc = removeCanvas.getGraphicsContext2D();
-                    pane.getChildren().add(removeCanvas);
-                    removeCanvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
-                        @Override
-                        public void handle(MouseEvent mouseEvent) {
-                            createMouseEvent(mouseEvent, removalMarked, removeColor, removeCanvas.getGraphicsContext2D());
-                            seamCarver.setRemovalMarked(removalMarked);
-                        }
-                    });
-                    if (removalMarked == null) {
-                        removalMarked = new ArrayList<>();
-                        for (int y = 0; y < seamCarver.height(); y++) {
-                            removalMarked.add(new ArrayList<>());
-                        }
-                    }
-                } else {
-                    pane.getChildren().removeAll(removeCanvas);
+        selectPreserveArea.setOnAction(event -> {
+            if (selectRemoveArea.isSelected()) selectRemoveArea.setSelected(false);
+            if (selectPreserveArea.isSelected()) {
+                if (!viewPreserveArea.isSelected()) {
+                    viewPreserveArea.setSelected(true);
+                    viewPreserveArea.fire();
                 }
-            }
-        });
-        CheckMenuItem selectPreserveArea = new CheckMenuItem("Enable Area Selection for Preservation");
-        selectPreserveArea.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                if (selectPreserveArea.isSelected()) {
-                    if (preserveCanvas == null) preserveCanvas = new Canvas(seamCarver.width(), seamCarver.height());
-                    else if (preserveCanvas.getHeight() != seamCarver.height() || preserveCanvas.getWidth() != seamCarver.width())
-                        resizeCanvas(preserveCanvas, preserveMarked, preserveColor);
-                    GraphicsContext gc = preserveCanvas.getGraphicsContext2D();
-                    pane.getChildren().add(preserveCanvas);
-                    preserveCanvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
-                        @Override
-                        public void handle(MouseEvent mouseEvent) {
-                            createMouseEvent(mouseEvent, preserveMarked, preserveColor, preserveCanvas.getGraphicsContext2D());
-                            seamCarver.setPreserveMarked(preserveMarked);
-                        }
-                    });
-                    if (preserveMarked == null) {
-                        preserveMarked = new ArrayList<>();
-                        for (int y = 0; y < seamCarver.height(); y++) {
-                            preserveMarked.add(new ArrayList<>());
-                        }
+                preserveCanvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, mouseEvent -> {
+                    createMouseEvent(mouseEvent, preserveMarked, preserveColor, preserveCanvas.getGraphicsContext2D());
+                    seamCarver.setPreserveMarked(preserveMarked);
+                });
+                if (preserveMarked == null) {
+                    preserveMarked = new ArrayList<>();
+                    for (int y = 0; y < seamCarver.height(); y++) {
+                        preserveMarked.add(new ArrayList<>());
                     }
-                } else {
-                    pane.getChildren().removeAll(preserveCanvas);
                 }
             }
         });
         menuEdit.getItems().addAll(changeHeight, changeWidth, selectRemoveArea, selectPreserveArea);
-        menuBar.getMenus().addAll(menuFile, menuEdit);
+        Menu menuView = new Menu("View");
+        menuView.getItems().addAll(viewRemoveArea, viewPreserveArea);
+        MenuItem clearRemoveSelection = new MenuItem("Clear Removal Selection");
+        clearRemoveSelection.setOnAction(event -> {
+            removalMarked = null;
+            removeCanvas.getGraphicsContext2D().clearRect(0, 0, removeCanvas.getWidth(), removeCanvas.getHeight());
+            seamCarver.setRemovalMarked(null);
+        });
+        MenuItem clearPreserveSelection = new MenuItem("Clear Preservation Selection");
+        clearPreserveSelection.setOnAction(event -> {
+            preserveMarked = null;
+            preserveCanvas.getGraphicsContext2D().clearRect(0, 0, preserveCanvas.getWidth(), preserveCanvas.getHeight());
+            seamCarver.setPreserveMarked(null);
+        });
+        MenuItem autoRemoveSelection = new MenuItem("Automatically Remove Selection");
+        autoRemoveSelection.setOnAction(event -> {
+            seamCarver.autoRemoveMarked();
+            removalMarked = seamCarver.getRemovalMarked();
+        });
+        menuSelection.getItems().addAll(clearRemoveSelection, clearPreserveSelection, autoRemoveSelection);
+        menuBar.getMenus().addAll(menuFile, menuEdit, menuView);
         final String os = System.getProperty("os.name");
         if (os != null && os.startsWith("Mac"))
             menuBar.useSystemMenuBarProperty().set(true);

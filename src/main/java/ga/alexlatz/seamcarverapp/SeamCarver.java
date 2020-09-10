@@ -17,6 +17,7 @@ public class SeamCarver {
     private final Stack<ArrayList<Integer>> addedFlipped;
     private final Stack<ArrayList<Integer>> deletedFlipped;
     private ArrayList<ArrayList<Integer>> removalMarked;
+    private int removeSize;
     private ArrayList<ArrayList<Integer>> preserveMarked;
     private boolean flipped;
     private boolean override;
@@ -52,15 +53,22 @@ public class SeamCarver {
 
     public void setRemovalMarked(ArrayList<ArrayList<Integer>> removalMarked) {
         this.removalMarked = removalMarked;
-        for (int y = 0; y < height(); y++) {
-            for (int x : removalMarked.get(y)) energy[x][y] = energy(x, y);
-        }
+        if (removalMarked != null) {
+            for (int y = 0; y < height(); y++) {
+                for (int x : removalMarked.get(y)) {
+                    energy[x][y] = energy(x, y);
+                    removeSize++;
+                }
+            }
+        } else removeSize = 0;
     }
 
     public void setPreserveMarked(ArrayList<ArrayList<Integer>> preserveMarked) {
         this.preserveMarked = preserveMarked;
-        for (int y = 0; y < height(); y++) {
-            for (int x : preserveMarked.get(y)) energy[x][y] = energy(x, y);
+        if (preserveMarked != null) {
+            for (int y = 0; y < height(); y++) {
+                for (int x : preserveMarked.get(y)) energy[x][y] = energy(x, y);
+            }
         }
     }
 
@@ -221,8 +229,10 @@ public class SeamCarver {
                 ArrayList<Integer> yList = removalMarked.get(y);
                 for (int i = 0; i < seam[0].length; i++) {
                     int result = Collections.binarySearch(yList, seam[y][i]);
-                    if (result >= 0 && yList.get(result) == seam[y][i]) yList.remove(result);
-                    else result = Math.abs(result) - 1;
+                    if (result >= 0 && yList.get(result) == seam[y][i]) {
+                        yList.remove(result);
+                        removeSize--;
+                    } else result = Math.abs(result) - 1;
                     for (int j = result; j < yList.size(); j++) {
                         yList.set(j, yList.get(j) - 1);
                     }
@@ -336,6 +346,13 @@ public class SeamCarver {
         if (!flipped) transpose();
         override = true;
         addVerticalSeam(num);
+    }
+
+    public void autoRemoveMarked() {
+        int width = width();
+        while (removeSize > 0) removeVerticalSeam(1);
+        addVerticalSeam(width - width());
+        removalMarked = null;
     }
 
     private void transpose() {
