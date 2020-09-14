@@ -51,16 +51,9 @@ public class SeamCarver {
         return image;
     }
 
-    public void setRemovalMarked(ArrayList<ArrayList<Integer>> removalMarked) {
-        this.removalMarked = removalMarked;
-        if (removalMarked != null) {
-            for (int y = 0; y < height(); y++) {
-                for (int x : removalMarked.get(y)) {
-                    energy[x][y] = energy(x, y);
-                    removeSize++;
-                }
-            }
-        } else removeSize = 0;
+    public ArrayList<ArrayList<Integer>> getRemovalMarked() {
+        if (flipped) transpose();
+        return removalMarked;
     }
 
     public void setPreserveMarked(ArrayList<ArrayList<Integer>> preserveMarked) {
@@ -72,17 +65,27 @@ public class SeamCarver {
         }
     }
 
-    public ArrayList<ArrayList<Integer>> getRemovalMarked() {
-        return removalMarked;
+    public void setRemovalMarked(ArrayList<ArrayList<Integer>> removalMarked) {
+        this.removalMarked = removalMarked;
+        removeSize = 0;
+        if (removalMarked != null) {
+            for (int y = 0; y < height(); y++) {
+                for (int x : removalMarked.get(y)) {
+                    energy[x][y] = energy(x, y);
+                    removeSize++;
+                }
+            }
+        }
     }
 
     public ArrayList<ArrayList<Integer>> getPreserveMarked() {
+        if (flipped) transpose();
         return preserveMarked;
     }
 
     public double energy(final int x, final int y) {
-        if (preserveMarked != null && preserveMarked.get(y).contains(x)) return 10000;
-        if (removalMarked != null && removalMarked.get(y).contains(x)) return -10000;
+        if (preserveMarked != null && preserveMarked.get(y).contains(x)) return 100000;
+        if (removalMarked != null && removalMarked.get(y).contains(x)) return -100000;
         if (x == 0 || x == width() - 1 || y == 0 || y == height() - 1)
             return 1000;
         PixelReader reader = image.getPixelReader();
@@ -122,12 +125,13 @@ public class SeamCarver {
         for (int i = startFrom; i < num; i++) {
             double min = Double.POSITIVE_INFINITY;
             for (int x = 0; x < width(); x++) {
-                for (int j = 0; j < i; j++) {
-                    if (Math.abs(seams[height() - 2][j] - x) < 20) continue;
-                    if (energyTo[x][height() - 2] < min && !usedPixels[height() - 2][x]) {
-                        min = energyTo[x][height() - 2];
-                        seams[height() - 2][i] = x;
-                    }
+                /*for (int j = 0; j < i; j++) {
+                    if (Math.abs(seams[height() - 2][j] - x) < 20) ;
+                }
+                 */
+                if (energyTo[x][height() - 2] < min && !usedPixels[height() - 2][x]) {
+                    min = energyTo[x][height() - 2];
+                    seams[height() - 2][i] = x;
                 }
             }
             seams[height() - 1][i] = seams[height() - 2][i];
@@ -155,6 +159,14 @@ public class SeamCarver {
                     }
                 }
                 usedPixels[y - 1][seams[y - 1][i]] = true;
+            }
+        }
+        if (removalMarked != null) {
+            for (int i = startFrom; i < num; i++) {
+                if (energyTo[seams[height() - 2][i]][height() - 2] > -10000) {
+                    removalMarked = null;
+                    removeSize = 0;
+                }
             }
         }
         return seams;
@@ -230,8 +242,8 @@ public class SeamCarver {
                 for (int i = 0; i < seam[0].length; i++) {
                     int result = Collections.binarySearch(yList, seam[y][i]);
                     if (result >= 0 && yList.get(result) == seam[y][i]) {
-                        yList.remove(result);
                         removeSize--;
+                        yList.remove(result);
                     } else result = Math.abs(result) - 1;
                     for (int j = result; j < yList.size(); j++) {
                         yList.set(j, yList.get(j) - 1);
@@ -350,7 +362,7 @@ public class SeamCarver {
 
     public void autoRemoveMarked() {
         int width = width();
-        while (removeSize > 0) removeVerticalSeam(1);
+        while (removeSize > 0) removeVerticalSeam((int) Math.ceil((double) removeSize / 100.0));
         addVerticalSeam(width - width());
         removalMarked = null;
     }

@@ -280,6 +280,8 @@ public class SeamCarverWindow extends Application {
         autoRemoveSelection.setOnAction(event -> {
             seamCarver.autoRemoveMarked();
             removalMarked = seamCarver.getRemovalMarked();
+            imageView.setImage(seamCarver.image());
+            resizeCanvas(removeCanvas, null, removeColor);
         });
         menuSelection.getItems().addAll(clearRemoveSelection, clearPreserveSelection, autoRemoveSelection);
         menuBar.getMenus().addAll(menuFile, menuEdit, menuView);
@@ -308,6 +310,7 @@ public class SeamCarverWindow extends Application {
         if (canvas == null) return;
         GraphicsContext gc = canvas.getGraphicsContext2D();
         gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        if (marked == null) return;
         gc.setFill(color);
         for (int y = 0; y < marked.size(); y++) {
             for (int x : marked.get(y)) {
