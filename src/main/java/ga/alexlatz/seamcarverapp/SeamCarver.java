@@ -362,7 +362,7 @@ public class SeamCarver {
 
     public void autoRemoveMarked() {
         int width = width();
-        while (removeSize > 0) removeVerticalSeam((int) Math.ceil((double) removeSize / 100.0));
+        while (removeSize > 0) removeVerticalSeam((int) Math.ceil((double) removeSize / 250.0));
         addVerticalSeam(width - width());
         removalMarked = null;
     }

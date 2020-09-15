@@ -197,6 +197,8 @@ public class SeamCarverWindow extends Application {
         });
         CheckMenuItem viewRemoveArea = new CheckMenuItem("View Selected Area for Removal");
         CheckMenuItem viewPreserveArea = new CheckMenuItem("View Selected Area for Preservation");
+        CheckMenuItem selectRemoveArea = new CheckMenuItem("Select Area for Removal");
+        CheckMenuItem selectPreserveArea = new CheckMenuItem("Select Area for Preservation");
         viewRemoveArea.setOnAction(event -> {
             if (viewRemoveArea.isSelected()) {
                 if (!menuBar.getMenus().contains(menuSelection)) menuBar.getMenus().add(menuSelection);
@@ -207,6 +209,7 @@ public class SeamCarverWindow extends Application {
             } else {
                 pane.getChildren().remove(removeCanvas);
                 if (!viewPreserveArea.isSelected()) menuBar.getMenus().remove(menuSelection);
+                if (selectRemoveArea.isSelected()) selectRemoveArea.setSelected(false);
             }
         });
         viewPreserveArea.setOnAction(event -> {
@@ -219,10 +222,9 @@ public class SeamCarverWindow extends Application {
             } else {
                 pane.getChildren().remove(preserveCanvas);
                 if (!viewRemoveArea.isSelected()) menuBar.getMenus().remove(menuSelection);
+                if (selectPreserveArea.isSelected()) selectPreserveArea.setSelected(false);
             }
         });
-        CheckMenuItem selectRemoveArea = new CheckMenuItem("Select Area for Removal");
-        CheckMenuItem selectPreserveArea = new CheckMenuItem("Select Area for Preservation");
         selectRemoveArea.setOnAction(event -> {
             if (selectPreserveArea.isSelected()) selectPreserveArea.setSelected(false);
             if (selectRemoveArea.isSelected()) {
@@ -231,15 +233,10 @@ public class SeamCarverWindow extends Application {
                     viewRemoveArea.fire();
                 }
                 removeCanvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, mouseEvent -> {
+                    checkNull(true);
                     createMouseEvent(mouseEvent, removalMarked, removeColor, removeCanvas.getGraphicsContext2D());
                     seamCarver.setRemovalMarked(removalMarked);
                 });
-                if (removalMarked == null) {
-                    removalMarked = new ArrayList<>();
-                    for (int y = 0; y < seamCarver.height(); y++) {
-                        removalMarked.add(new ArrayList<>());
-                    }
-                }
             }
         });
         selectPreserveArea.setOnAction(event -> {
@@ -250,15 +247,10 @@ public class SeamCarverWindow extends Application {
                     viewPreserveArea.fire();
                 }
                 preserveCanvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, mouseEvent -> {
+                    checkNull(false);
                     createMouseEvent(mouseEvent, preserveMarked, preserveColor, preserveCanvas.getGraphicsContext2D());
                     seamCarver.setPreserveMarked(preserveMarked);
                 });
-                if (preserveMarked == null) {
-                    preserveMarked = new ArrayList<>();
-                    for (int y = 0; y < seamCarver.height(); y++) {
-                        preserveMarked.add(new ArrayList<>());
-                    }
-                }
             }
         });
         menuEdit.getItems().addAll(changeHeight, changeWidth, selectRemoveArea, selectPreserveArea);
@@ -301,6 +293,22 @@ public class SeamCarverWindow extends Application {
                 if (!yList.contains(newX)) {
                     gc.fillRect(newX, newY, 1, 1);
                     yList.add(newX);
+                }
+            }
+        }
+    }
+
+    private void checkNull(boolean remove) {
+        if (remove) if (removalMarked == null) {
+            removalMarked = new ArrayList<>();
+            for (int y = 0; y < seamCarver.height(); y++) {
+                removalMarked.add(new ArrayList<>());
+            }
+        } else {
+            if (preserveMarked == null) {
+                preserveMarked = new ArrayList<>();
+                for (int y = 0; y < seamCarver.height(); y++) {
+                    preserveMarked.add(new ArrayList<>());
                 }
             }
         }
